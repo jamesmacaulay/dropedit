@@ -1,0 +1,1147 @@
+{
+	"type": "PROJ",
+	"version": 2.00,
+	"versionInstalled": 2.01,
+	"state": {
+		"rotary": {
+			"000": 0.49257,
+			"001": 0.49297,
+			"002": 0.49570,
+			"003": 0.49921,
+			"010": 0.49610,
+			"011": 0.00000,
+			"012": 0.00000,
+			"013": 0.00000,
+			"020": 0.00000,
+			"021": 0.00000,
+			"022": 0.00000,
+			"023": 0.00000,
+			"030": 0.00000,
+			"031": 0.00000,
+			"032": 0.00000,
+			"033": 0.00000,
+			"040": 0.00000,
+			"041": 0.00000,
+			"042": 0.00000,
+			"043": 0.00000,
+			"050": 0.86132,
+			"051": 1.00000,
+			"052": 1.00000,
+			"053": 0.00000,
+			"060": 1.00000,
+			"061": 1.00000,
+			"062": 1.00000,
+			"063": 0.00000,
+			"070": 1.00000,
+			"071": 1.00000,
+			"072": 1.00000,
+			"073": 1.00000
+		},
+		"rotbut": {
+		},
+		"mute": {
+		},
+		"fader": {
+			"00": 0.49928,
+			"01": 0.49637,
+			"02": 0.49056,
+			"03": 0.49827,
+			"04": 0.49801,
+			"05": 0.49703,
+			"06": 0.49455,
+			"07": 0.49422
+		},
+		"bjBars": 8,
+		"bjQuant": 1,
+		"jumpQuant": 0
+	},
+	"device": {
+		"0": {
+			"inUse": 1,
+			"name": "Deluge",
+			"portOut": 3,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 1,
+			"csvPath": "/midi-main/Synthstrom",
+			"csvFile": "Deluge.csv",
+			"merge": {
+			}
+		},
+		"1": {
+			"inUse": 0,
+			"name": "DEVICE 2",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"2": {
+			"inUse": 0,
+			"name": "DEVICE 3",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"3": {
+			"inUse": 0,
+			"name": "DEVICE 4",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"4": {
+			"inUse": 0,
+			"name": "DEVICE 5",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"5": {
+			"inUse": 0,
+			"name": "DEVICE 6",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"6": {
+			"inUse": 0,
+			"name": "DEVICE 7",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"7": {
+			"inUse": 0,
+			"name": "DEVICE 8",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		}
+	},
+	"map": {
+		"rotary": {
+			"000": {
+				"name": "AMOUNT",
+				"colId": 9,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"001": {
+				"name": "RATE",
+				"colId": 9,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"002": {
+				"name": "REVERB AMOUNT",
+				"colId": 9,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"003": {
+				"name": "FREQUENCY",
+				"colId": 9,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"010": {
+				"name": "AMOUNT",
+				"colId": 0,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"011": {
+				"name": "RATE",
+				"colId": 0,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"012": {
+				"name": "REVERB AMOUNT",
+				"colId": 0,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"013": {
+				"name": "FREQUENCY",
+				"colId": 0,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"020": {
+				"name": "AMOUNT",
+				"colId": 1,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"021": {
+				"name": "RATE",
+				"colId": 1,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"022": {
+				"name": "REVERB AMOUNT",
+				"colId": 1,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"023": {
+				"name": "FREQUENCY",
+				"colId": 1,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"030": {
+				"name": "AMOUNT",
+				"colId": 10,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"031": {
+				"name": "RATE",
+				"colId": 10,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"032": {
+				"name": "REVERB AMOUNT",
+				"colId": 10,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"033": {
+				"name": "FREQUENCY",
+				"colId": 10,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"040": {
+				"name": "AMOUNT",
+				"colId": 11,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"041": {
+				"name": "RATE",
+				"colId": 11,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"042": {
+				"name": "REVERB AMOUNT",
+				"colId": 11,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"043": {
+				"name": "FREQUENCY",
+				"colId": 11,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"050": {
+				"name": "AMOUNT",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"051": {
+				"name": "RATE",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"052": {
+				"name": "REVERB AMOUNT",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"053": {
+				"name": "FREQUENCY",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"060": {
+				"name": "AMOUNT",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"061": {
+				"name": "RATE",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"062": {
+				"name": "REVERB AMOUNT",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"063": {
+				"name": "FREQUENCY",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"070": {
+				"name": "AMOUNT",
+				"colId": 8,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1509949455,
+					"msgNr": 52.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"071": {
+				"name": "RATE",
+				"colId": 8,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1518338064,
+					"msgNr": 53.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"072": {
+				"name": "REVERB AMOUNT",
+				"colId": 8,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1837105227,
+					"msgNr": 91.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"073": {
+				"name": "FREQUENCY",
+				"colId": 8,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1753219118,
+					"msgNr": 81.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			}
+		},
+		"rotbut": {},
+		"mute": {},
+		"fader": {
+			"00": {
+				"name": "MASTER LEVEL",
+				"colId": 9,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"01": {
+				"name": "MASTER LEVEL",
+				"colId": 0,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"02": {
+				"name": "MASTER LEVEL",
+				"colId": 1,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"03": {
+				"name": "MASTER LEVEL",
+				"colId": 10,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"04": {
+				"name": "MASTER LEVEL",
+				"colId": 11,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"05": {
+				"name": "MASTER LEVEL",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"06": {
+				"name": "MASTER LEVEL",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"07": {
+				"name": "MASTER LEVEL",
+				"colId": 8,
+				"dropOrder": 0,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 1132462137,
+					"msgNr": 7.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			}
+		},
+		"snp": {}
+	},
+	"chain": {
+	},
+	"clk": {
+		"bpm": 125.00,
+		"mode": 0,
+		"deviceId": 0,
+		"sendUSB1": 3,
+		"sendUSB2": 3,
+		"sendTRS1": 3,
+		"sendTRS2": 3,
+		"sendTRS3": 3,
+		"sendTRS4": 3,
+		"dlyUSB1": 0,
+		"dlyUSB2": 0,
+		"dlyTRS1": 0,
+		"dlyTRS2": 0,
+		"dlyTRS3": 0,
+		"dlyTRS4": 0,
+		"dlyCV1": 0,
+		"dlyCV2": 0,
+		"dlyUSB1ck": 0,
+		"dlyUSB2ck": 0,
+		"dlyTRS1ck": 0,
+		"dlyTRS2ck": 0,
+		"dlyTRS3ck": 0,
+		"dlyTRS4ck": 0,
+		"dlyCV1ck": 0,
+		"dlyCV2ck": 0,
+		"maskSubPort1": 65535,
+		"maskSubPort2": 65535,
+		"clkWhileStopped": 1
+	},
+	"grid": {
+		"target": 0,
+		"mode": 0,
+		"velo": 16383,
+		"ch": 0,
+		"scaleMask": 4095
+	},
+	"layers": {
+		"modeA": 1,
+		"modeB": 2,
+		"curId": 0,
+		"0": {
+			"colId": 4,
+			"name": "Layer 1"
+		},
+		"1": {
+			"colId": 7,
+			"name": "Layer 2"
+		},
+		"2": {
+			"colId": 0,
+			"name": "Layer 3"
+		},
+		"3": {
+			"colId": 2,
+			"name": "Layer 4"
+		},
+		"4": {
+			"colId": 1,
+			"name": "Layer 5"
+		},
+		"5": {
+			"colId": 3,
+			"name": "Layer 6"
+		},
+		"6": {
+			"colId": 6,
+			"name": "Layer 7"
+		},
+		"7": {
+			"colId": 5,
+			"name": "Layer 8"
+		}
+	},
+	"cvOut": {
+		"0": {
+			"cvOutMode": 6,
+			"vMin": 0.000,
+			"vMax": 5.000,
+			"link": "none"
+		},
+		"1": {
+			"cvOutMode": 8,
+			"vMin": 0.000,
+			"vMax": 5.000,
+			"link": "none"
+		}
+	},
+	"cvIn": {
+		"0": {
+			"cvInMode": 0
+		},
+		"1": {
+			"cvInMode": 0
+		}
+	},
+	"remote": {
+		"levelRx": 0,
+		"deviceRx": 0,
+		"chanRx": 16,
+		"levelTx": 0,
+		"deviceTx": 0,
+		"chanTx": 16,
+		"jumpMidiMode": 0,
+		"jumpMidiNote": 24,
+		"jumpMidiInstant": 0,
+		"jumpMidiDevice": 0,
+		"jumpMidiChan": 0
+	},
+	"settings": {
+		"dropExcl": 0,
+		"jumpExcl": 0,
+		"jumpDur": 0,
+		"sendOnLoad": 1,
+		"bankToChain": 0,
+		"chainToBank": 0,
+		"usb1Role": 0,
+		"usb2Role": 0,
+		"showCtrlNames": 1,
+		"menuRoot": 1,
+		"remembSnp": 0,
+		"selGroup": {
+			"0": {
+				"data": [0,255,255,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 4
+			},
+			"1": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 7
+			},
+			"2": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 0
+			},
+			"3": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 2
+			},
+			"4": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 1
+			},
+			"5": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 3
+			},
+			"6": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 6
+			},
+			"7": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 5
+			}
+		}
+	}
+}
