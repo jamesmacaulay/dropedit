@@ -1,24 +1,44 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseJson } from '../model/jsonDoc'
 import { readLayers, readDevices } from '../model/dropProject'
-import { copyLayer, copyControlText, pasteControl, removeControl, createControl, setDeviceCsv } from '../model/edits'
+import { copyControlText, pasteControl, copyControls, pasteControls, removeControl, createControl, setDeviceCsv, type CopiedControl } from '../model/edits'
 import { parseBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
-import type { ControlType } from '../model/controlId'
+import { isPositional, withLayer, type ControlType } from '../model/controlId'
 import { Surface, selKey } from './Surface'
 import { SnapshotGrid } from './SnapshotGrid'
 import { Sidebar } from './Sidebar'
 import { DeviceEditor } from './DeviceEditor'
+import { CLEAN_INIT, DAW_INIT } from '../data/inits'
 
 const LAYERS = 8
+const STORAGE_KEY = 'dropedit:project'
+const STORAGE_FILE = 'dropedit:fileName'
+
+// Last project + filename saved to localStorage, or null if none / unavailable.
+function readStored(): { text: string; name: string } | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const t = localStorage.getItem(STORAGE_KEY)
+    return t != null ? { text: t, name: localStorage.getItem(STORAGE_FILE) || 'project.json' } : null
+  } catch { return null }
+}
+function persistProject(text: string, name?: string) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, text)
+    if (name != null) localStorage.setItem(STORAGE_FILE, name)
+  } catch { /* quota / disabled storage — keep working in-memory */ }
+}
 
 export function App() {
-  const [text, setText] = useState<string | null>(null)
-  const [fileName, setFileName] = useState('project.json')
+  // First load restores the saved project; with nothing saved, start from the clean-init blank slate.
+  const [text, setText] = useState<string | null>(() => readStored()?.text ?? CLEAN_INIT)
+  const [fileName, setFileName] = useState(() => readStored()?.name ?? 'clean-init.json')
   const [layer, setLayer] = useState(0)
   const [bank, setBank] = useState(0)
   const [selection, setSelection] = useState<string[]>([])
-  const [clipboard, setClipboard] = useState<{ type: ControlType; valueText: string } | null>(null)
+  const [clipboard, setClipboard] = useState<CopiedControl[] | null>(null)
   const [deviceEditorOpen, setDeviceEditorOpen] = useState(false)
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
@@ -39,10 +59,15 @@ export function App() {
   }, [doc, uploads])
   const deviceFor = (t: number) => devicePresets.get(t) ?? null
 
-  function apply(next: string) { setText(next) }
+  // every edit returns new project text; persist it so the view, the download, and the
+  // restored-on-reload copy are always the same bytes.
+  function apply(next: string) { setText(next); persistProject(next) }
 
   function loadProject(file: File) {
-    file.text().then((t) => { setText(t); setFileName(file.name); setSelection([]); setLayer(0) })
+    file.text().then((t) => loadInit(t, file.name))
+  }
+  function loadInit(t: string, name: string) {
+    setText(t); setFileName(name); persistProject(t, name); setSelection([]); setLayer(0)
   }
   function onUploadCsv(index: number, file: File) {
     file.text().then((t) => {
@@ -77,11 +102,14 @@ export function App() {
     const colId = layers[layer]?.colId ?? 0
     for (const tg of tgts) {
       const k = tg.type + ':' + tg.id
+      const mapped = copyControlText(t, tg.type, tg.id) != null
       if (active) {
+        if (mapped) continue // already active — don't clobber its settings
         const stashed = inactiveStore.current.get(k)
         t = stashed ? pasteControl(t, tg.type, tg.id, stashed) : createControl(t, tg.type, tg.id, { name: '', colId }, false)
         inactiveStore.current.delete(k)
       } else {
+        if (!mapped) continue // already inactive
         const vt = copyControlText(t, tg.type, tg.id)
         if (vt) inactiveStore.current.set(k, vt)
         t = removeControl(t, tg.type, tg.id)
@@ -89,17 +117,25 @@ export function App() {
     }
     apply(t)
   }
+  // selection is positional (layer-independent): switching layers re-targets it to the new
+  // layer so e.g. "fader 1" stays selected across layers. snp & non-positional keys are kept as-is.
+  function switchLayer(next: number) {
+    setSelection((sel) => sel.map((k) => {
+      const [type, id] = splitKey(k)
+      return isPositional(type) ? selKey(type, withLayer(id, next)) : k
+    }))
+    setLayer(next)
+  }
+  const selControls = () => selection.map(splitKey).map(([type, id]) => ({ type, id }))
+  const hasPositional = selection.some((k) => isPositional(splitKey(k)[0]))
   function doCopy() {
-    if (!text || selection.length !== 1) return
-    const [type, id] = splitKey(selection[0])
-    const vt = copyControlText(text, type, id)
-    if (vt) setClipboard({ type, valueText: vt })
+    if (!text || !hasPositional) return
+    const clip = copyControls(text, selControls())
+    if (clip.some((c) => c.valueText != null)) setClipboard(clip)
   }
   function doPaste() {
-    if (!text || !clipboard || selection.length !== 1) return
-    const [type, id] = splitKey(selection[0])
-    if (type !== clipboard.type) return // cross-type paste not supported in v1
-    apply(pasteControl(text, type, id, clipboard.valueText))
+    if (!text || !clipboard || !hasPositional) return
+    apply(pasteControls(text, clipboard, selControls(), layer))
   }
   function doDelete() {
     if (!text || selection.length === 0) return
@@ -108,13 +144,34 @@ export function App() {
     apply(t)
   }
 
+  // Ctrl/Cmd+C / +V copy & paste the selection. Only when a positional control is selected
+  // (so ordinary text copy/paste and form fields are left alone).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return
+      const k = e.key.toLowerCase()
+      if (k === 'c' && hasPositional) { e.preventDefault(); doCopy() }
+      else if (k === 'v' && clipboard && hasPositional) { e.preventDefault(); doPaste() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [text, selection, clipboard, layer])
+
   return (
     <div className="app">
       <header className="topbar">
         <strong>dropedit</strong>
         <label className="btn">Open project
-          <input type="file" accept=".json" hidden onChange={(e) => e.target.files?.[0] && loadProject(e.target.files[0])} />
+          <input type="file" accept=".json" hidden onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) loadProject(f)
+            e.target.value = '' // allow re-selecting the same file to reload it
+          }} />
         </label>
+        <button onClick={() => loadInit(CLEAN_INIT, 'clean-init.json')}>Clean Init</button>
+        <button onClick={() => loadInit(DAW_INIT, 'daw-init.json')}>DAW Init</button>
         <button onClick={save} disabled={!text}>Download</button>
         <span className="grow" />
         <span className="muted">{text ? fileName : 'no project loaded'}</span>
@@ -136,24 +193,15 @@ export function App() {
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="layers">
                   {Array.from({ length: LAYERS }, (_, i) => (
-                    <button key={i} className={i === layer ? 'active' : ''} onClick={() => { setLayer(i); setSelection([]) }}>
+                    <button key={i} className={i === layer ? 'active' : ''} onClick={() => switchLayer(i)}>
                       {layers[i]?.name ?? `Layer ${i + 1}`}
                     </button>
                   ))}
                 </div>
                 <div className="ops">
-                  <button onClick={doCopy} disabled={selection.length !== 1}>Copy control</button>
-                  <button onClick={doPaste} disabled={!clipboard || selection.length !== 1}>Paste here</button>
+                  <button onClick={doCopy} disabled={!hasPositional}>Copy</button>
+                  <button onClick={doPaste} disabled={!clipboard || !hasPositional}>{clipboard && clipboard.length > 1 ? 'Paste' : 'Paste here'}</button>
                   <button onClick={doDelete} disabled={selection.length === 0}>Delete</button>
-                  <span className="sep" />
-                  <label>Copy layer {layer + 1} →
-                    <select value="" onChange={(e) => e.target.value !== '' && apply(copyLayer(text!, layer, Number(e.target.value)))}>
-                      <option value="">dest…</option>
-                      {Array.from({ length: LAYERS }, (_, i) => i).filter((i) => i !== layer).map((i) => (
-                        <option key={i} value={i}>Layer {i + 1}</option>
-                      ))}
-                    </select>
-                  </label>
                 </div>
               </div>
             </div>

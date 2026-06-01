@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { load, readControl, readLayers, readDevices, mappedIds, readStateValue, readGroupMember, selGroupLocation } from '../src/model/dropProject'
 import {
   setControlField, setSlotField, bulkSetSlotField, assignParam, createControl, removeControl,
-  setChannelForLayer, copyLayer, copyControlText, pasteControl, formatValue, setStateValue,
+  setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls, formatValue, setStateValue,
   addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember,
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
@@ -245,5 +245,87 @@ describe('copy / paste a control', () => {
     const out = pasteControl(EXP, 'rotary', '150', vt)
     expect(obj(out).map.rotary['150'].name).toBe('AMOUNT')
     expect(obj(out).map.rotary['000'].name).toBe('AMOUNT') // source intact
+  })
+})
+
+describe('multi-control copy / paste (positional)', () => {
+  const sel = (...ks: string[]) => ks.map((k) => { const i = k.indexOf(':'); return { type: k.slice(0, i) as any, id: k.slice(i + 1) } })
+
+  it('keys copies to per-type anchor offsets (topmost row, then leftmost col)', () => {
+    // 000 = col0,row0 (AMOUNT); 001 = col0,row1 (RATE). Anchor = 000 (topmost row).
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:001'))
+    expect(clip).toHaveLength(2)
+    expect(clip.find((c) => c.dCol === 0 && c.dRow === 0)!.valueText).toContain('"AMOUNT"')
+    expect(clip.find((c) => c.dCol === 0 && c.dRow === 1)!.valueText).toContain('"RATE"')
+  })
+
+  it('anchors the whole multi-type block to a single destination control', () => {
+    // copy column 0: rotaries rows 0-3 + the fader. Paste onto a single rotary anchor.
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:001', 'rotary:002', 'rotary:003', 'fader:00'))
+    const out = obj(pasteControls(EXP, clip, sel('rotary:150'), 1)) // single anchor, empty layer 1, col5
+    expect(out.map.rotary['150'].name).toBe('AMOUNT')        // anchor + (0,0)
+    expect(out.map.rotary['153'].name).toBe('FREQUENCY')     // anchor + (0,3)
+    expect(out.map.fader['15'].name).toBe('MASTER LEVEL')    // fader pasted to the same column despite the lone rotary anchor
+  })
+
+  it('pastes a block at the destination anchor on another layer', () => {
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:001')) // AMOUNT / RATE, vertical pair
+    // dest of the same shape on layer 1 at col3: anchor 130 (col3,row0)
+    const out = obj(pasteControls(EXP, clip, sel('rotary:130', 'rotary:131'), 1))
+    expect(out.map.rotary['130'].name).toBe('AMOUNT')
+    expect(out.map.rotary['131'].name).toBe('RATE')
+    expect(out.map.rotary['000'].name).toBe('AMOUNT') // source intact
+  })
+
+  it('anchors to the topmost-row leftmost control, not the leftmost-column control', () => {
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:001')) // offsets (0,0)=AMOUNT, (0,1)=RATE
+    // dest on empty layer 1: 130 = col3,row0 ; 111 = col1,row1. Topmost-row anchor = 130 (row0).
+    // A leftmost-column anchor would (wrongly) be 111 and land in col1.
+    const out = obj(pasteControls(EXP, clip, sel('rotary:130', 'rotary:111'), 1))
+    expect(out.map.rotary['130'].name).toBe('AMOUNT') // anchor + (0,0)
+    expect(out.map.rotary['131'].name).toBe('RATE')   // anchor + (0,1)
+    expect(out.map.rotary['111']).toBeUndefined()     // not the anchor
+    expect(out.map.rotary['112']).toBeUndefined()     // where leftmost-col anchoring would have put RATE
+  })
+
+  it('pasting a multi-selection back onto itself is a no-op', () => {
+    const s = sel('rotary:000', 'rotary:002', 'fader:00', 'fader:03')
+    const clip = copyControls(EXP, s)
+    expect(pasteControls(EXP, clip, s, 0)).toBe(EXP)
+  })
+
+  it('broadcasts a single copied control onto every selected position of its type', () => {
+    const clip = copyControls(EXP, sel('rotary:001')) // RATE
+    expect(clip).toHaveLength(1)
+    const out = obj(pasteControls(EXP, clip, sel('rotary:020', 'rotary:030', 'fader:00'), 0))
+    expect(out.map.rotary['020'].name).toBe('RATE')
+    expect(out.map.rotary['030'].name).toBe('RATE')
+    expect(out.map.fader['00'].name).toBe('MASTER LEVEL') // fader untouched (cross-type ignored)
+  })
+
+  it('copying a layer (select all) and pasting on another layer mirrors it, clearing empties', () => {
+    // every rotary + rotbut + fader position on layer 0 (rotbut is entirely empty here)
+    const all: string[] = []
+    for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < 4; r++) { all.push(`rotary:0${c}${r}`); all.push(`rotbut:0${c}${r}`) }
+      all.push(`fader:0${c}`)
+    }
+    const clip = copyControls(EXP, sel(...all))
+    // pre-seed layer 1 with a stray rotbut that the mirror must clear (its source pos is empty)
+    const seeded = createControl(EXP, 'rotbut', '100', { name: 'STRAY', colId: 0 }, false)
+    const destAll = all.map((k) => k.replace(/:0/, ':1'))
+    const out = obj(pasteControls(seeded, clip, sel(...destAll), 1))
+    expect(out.map.rotary['100'].name).toBe('AMOUNT')
+    expect(out.map.rotary['102'].name).toBe('REVERB AMOUNT')
+    expect(out.map.fader['10'].name).toBe('MASTER LEVEL')
+    expect(out.map.rotbut?.['100']).toBeUndefined() // empty source position cleared the seeded stray
+  })
+
+  it('drops paste targets that fall off the grid', () => {
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:070')) // span cols 0..7, anchor col0
+    // dest anchor at col6 -> the +7 offset target (col13) is off-grid and dropped
+    const out = obj(pasteControls(EXP, clip, sel('rotary:160', 'rotary:170'), 1))
+    expect(out.map.rotary['160'].name).toBe('AMOUNT') // anchor lands
+    expect(Object.keys(out.map.rotary).filter((k) => k[0] === '1' && Number(k[1]) > 7)).toHaveLength(0)
   })
 })

@@ -15,10 +15,12 @@ const EXP = readFileSync(join(here, 'fixtures', 'deluge-exp.json'), 'utf8')
 const OLD = readFileSync(join(here, 'fixtures', 'old-daw-init.json'), 'utf8')
 
 describe('UI smoke (renderToString, no DOM)', () => {
-  it('App renders the empty state without throwing', () => {
+  it('App boots into the clean-init blank slate without throwing', () => {
     const html = renderToString(<App />)
     expect(html).toContain('dropedit')
-    expect(html).toContain('Open a Drop')
+    expect(html).toContain('Clean Init') // init buttons present
+    expect(html).toContain('DAW Init')
+    expect(html).toContain('Layer 1') // workspace rendered (clean-init loaded), not the empty state
   })
 
   it('Surface renders controls for a loaded project', () => {

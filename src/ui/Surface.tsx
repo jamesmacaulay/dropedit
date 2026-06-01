@@ -84,7 +84,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
           <circle cx={cx} cy={cy} r={ROT_R} fill={rot ? colorFor(rot.colId) : '#26262c'}
             stroke={rsel ? '#fff' : '#54545e'} strokeWidth={rsel ? 3 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => onSelect([selKey('rotary', id)], e.shiftKey)} />
-          <circle cx={cx} cy={cy} r={5} fill={rb && rb.slots.length ? '#fff' : '#141418'}
+          <circle cx={cx} cy={cy} r={5} fill={rb ? colorFor(rb.colId) : '#141418'}
             stroke={bsel ? '#fff' : '#3a3a42'} strokeWidth={bsel ? 2 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => { e.stopPropagation(); onSelect([selKey('rotbut', id)], e.shiftKey) }} />
           <text x={cx} y={cy + ROT_R + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{rot ? trunc(rot.name) : ''}</text>
@@ -99,7 +99,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
         <rect x={cx - 17} y={muteY} width={34} height={MUTE_H} rx={6} fill={mv ? colorFor(mv.colId) : '#26262c'}
           stroke={msel ? '#fff' : '#54545e'} strokeWidth={msel ? 3 : 1} style={{ cursor: 'pointer' }}
           onClick={(e) => onSelect([selKey('mute', lc)], e.shiftKey)} />
-        <text x={cx} y={muteY + 15} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : 'mute'}</text>
+        <text x={cx} y={muteY + 15} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : ''}</text>
       </g>,
     )
     const fv = readControl(doc, 'fader', lc)

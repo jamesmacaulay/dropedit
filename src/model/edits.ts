@@ -6,7 +6,10 @@ import {
   editSetScalar, editInsertMember, editRemoveMember,
   type JsonDoc, type ScalarNode, type ObjectNode, type Edit,
 } from './jsonDoc'
-import { layerOfId, withLayer, parseControlId, type ControlType } from './controlId'
+import {
+  layerOfId, withLayer, parseControlId, formatControlId, hasRow, isPositional, COLS, ROWS,
+  type ControlType, type ControlPos,
+} from './controlId'
 import { makeCsvRef, type PresetParam } from './presetDb'
 import { selGroupLocation } from './dropProject'
 import { CONTROL_DEFAULTS } from './enums'
@@ -401,4 +404,108 @@ export function pasteControl(text: string, type: ControlType, destId: string, va
   const obj = getObject(doc.root, ['map', type])
   if (!obj) return text
   return applyEdits(cur, [editInsertMember(cur, obj, destId, valueText)])
+}
+
+// ---- multi-control copy / paste (positional, anchor-relative) -------------
+// Selection is positional (layer-independent): copied controls are keyed by their
+// offset from a SINGLE anchor = the control in the topmost row, then the leftmost
+// column, across all selected types together (faders/mutes count as row 0). Paste lays
+// the whole block down at (destination anchor + offset) regardless of type, so a single
+// selected control anchors the entire clipboard (Excel "block from anchor"); off-grid
+// targets drop. snp and other non-positional types are ignored.
+
+export interface CopiedControl {
+  type: ControlType
+  dCol: number
+  dRow: number
+  /** the control's map value text, or null if that selected position was empty (paste clears dest) */
+  valueText: string | null
+}
+
+export interface SelectedControl {
+  type: ControlType
+  id: string
+}
+
+const rowOf = (p: ControlPos) => p.row ?? 0
+
+/** The anchor of a selection: the position in the topmost row, then the leftmost column. */
+function anchorOf(positions: ControlPos[]): { col: number; row: number } | null {
+  let a: ControlPos | null = null
+  for (const p of positions) {
+    if (!a || rowOf(p) < rowOf(a) || (rowOf(p) === rowOf(a) && p.col < a.col)) a = p
+  }
+  return a ? { col: a.col, row: rowOf(a) } : null
+}
+
+const positionsOf = (sel: SelectedControl[]) =>
+  sel.filter((s) => isPositional(s.type)).map((s) => parseControlId(s.type, s.id))
+
+/** Capture the selected positional controls, keyed by anchor-relative offset.
+ *  Empty selected positions are captured as null so paste can clear their destination. */
+export function copyControls(text: string, sel: SelectedControl[]): CopiedControl[] {
+  const anchor = anchorOf(positionsOf(sel))
+  if (!anchor) return []
+  const doc = parseJson(text)
+  const out: CopiedControl[] = []
+  for (const type of SECTION_TYPES) {
+    const obj = getObject(doc.root, ['map', type])
+    for (const id of sel.filter((s) => s.type === type).map((s) => s.id)) {
+      const p = parseControlId(type, id)
+      const m = obj && getMember(obj, id)
+      out.push({
+        type,
+        dCol: p.col - anchor.col,
+        dRow: rowOf(p) - anchor.row,
+        valueText: m ? text.slice(m.value.span.start, m.value.span.end) : null,
+      })
+    }
+  }
+  return out
+}
+
+/** Paste copied controls into the destination selection on `layer`.
+ *  - broadcast: if exactly one control was copied, paste it onto every selected position
+ *    of the same type.
+ *  - anchor: otherwise lay the whole block down at (destination anchor + offset), where the
+ *    anchor is the single topmost-row leftmost selected control; the destination selection's
+ *    shape is otherwise ignored and off-grid targets drop.
+ *  Targets whose destination already holds the pasted value are skipped, so pasting a
+ *  selection back onto itself is a true no-op. */
+export function pasteControls(text: string, clip: CopiedControl[], destSel: SelectedControl[], layer: number): string {
+  if (!clip.length || !destSel.length) return text
+  const targets: { type: ControlType; id: string; valueText: string | null }[] = []
+
+  if (clip.length === 1) {
+    const src = clip[0]
+    if (src.valueText == null) return text
+    for (const d of destSel) {
+      if (d.type === src.type) targets.push({ type: d.type, id: d.id, valueText: src.valueText })
+    }
+  } else {
+    const anchor = anchorOf(positionsOf(destSel))
+    if (!anchor) return text
+    for (const e of clip) {
+      const col = anchor.col + e.dCol
+      const row = anchor.row + e.dRow
+      if (col < 0 || col >= COLS) continue
+      if (hasRow(e.type) && (row < 0 || row >= ROWS)) continue
+      const id = formatControlId({ type: e.type, layer, col, row: hasRow(e.type) ? row : undefined })
+      targets.push({ type: e.type, id, valueText: e.valueText })
+    }
+  }
+
+  let cur = text
+  for (const t of targets) {
+    const doc = parseJson(cur)
+    const obj = getObject(doc.root, ['map', t.type])
+    const m = obj && getMember(obj, t.id)
+    const curText = m ? cur.slice(m.value.span.start, m.value.span.end) : null
+    if (t.valueText == null) {
+      if (curText != null) cur = removeControl(cur, t.type, t.id) // clear an emptied position
+    } else if (curText !== t.valueText) {
+      cur = pasteControl(cur, t.type, t.id, t.valueText) // skip when already identical (no-op)
+    }
+  }
+  return cur
 }
