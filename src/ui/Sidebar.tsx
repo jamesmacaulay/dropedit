@@ -98,11 +98,14 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
 
   const allActive = targets.every((t) => !!t.view)
   const someActive = targets.some((t) => !!t.view)
-  const name = shared(targets, (t) => t.view?.name ?? '')
-  const colId = shared(targets, (t) => t.view?.colId)
-  const behavId = shared(targets, (t) => t.view?.behavId)
-  const feedbId = shared(targets, (t) => t.view?.feedbId)
-  const stateVal = shared(targets, (t) => readStateValue(doc, t.type, t.id))
+  // config values reflect the ACTIVE controls only — inactive ones have no config, so they must
+  // not drag a uniform value into "[multiple values]" when the selection is mixed.
+  const active = targets.filter((t) => t.view)
+  const name = shared(active, (t) => t.view!.name)
+  const colId = shared(active, (t) => t.view!.colId)
+  const behavId = shared(active, (t) => t.view!.behavId)
+  const feedbId = shared(active, (t) => t.view!.feedbId)
+  const stateVal = shared(active, (t) => readStateValue(doc, t.type, t.id))
 
   const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v), true)
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))

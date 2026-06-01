@@ -48,6 +48,15 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('[multiple values]') // AMOUNT vs RATE differ (general tab Name)
   })
 
+  it('Sidebar ignores inactive controls when deciding shared values', () => {
+    const doc = parseJson(EXP)
+    // rotary:000 is active (AMOUNT); rotary:150 is unmapped (inactive, layer 1 is empty)
+    const html = renderToString(<Sidebar text={EXP} doc={doc} deviceFor={() => null} selection={['rotary:000', 'rotary:150']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
+    expect(html).toContain('2 controls')
+    expect(html).toContain('AMOUNT')            // shows the single active control's value...
+    expect(html).not.toContain('[multiple values]') // ...not "[multiple values]"
+  })
+
   it('SnapshotGrid renders pads and Sidebar shows a snapshot editor', () => {
     const doc = parseJson(OLD)
     const grid = renderToString(<SnapshotGrid doc={doc} bank={0} selected={new Set()} onSelect={() => {}} onPickBank={() => {}} />)
