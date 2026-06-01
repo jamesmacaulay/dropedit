@@ -215,6 +215,8 @@ export function App() {
               <div className="left-col">
                 <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={switchBank} />
                 <button className="devices-btn" onClick={() => setDeviceEditorOpen(true)}>Devices…</button>
+              </div>
+              <div className="right-col">
                 <div className="layers">
                   {Array.from({ length: LAYERS }, (_, i) => (
                     <button key={i} className={i === layer ? 'active' : ''} onClick={() => switchLayer(i)}>
@@ -222,8 +224,6 @@ export function App() {
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="right-col">
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="ops">
                   <button onClick={doCopy} disabled={!canCopy}>Copy</button>
