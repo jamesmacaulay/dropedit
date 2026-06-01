@@ -37,6 +37,7 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .layers button { flex: 1 1 0; min-width: 70px; text-align: center; }
 .layers button.active { background: var(--accent); color: #222; border-color: var(--accent); }
 .ops { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.sc { margin-left: 6px; opacity: .55; font-size: .85em; }
 .ops .sep { width: 1px; height: 22px; background: var(--edge); }
 
 .sidebar { width: 300px; flex: none; align-self: stretch; min-height: 0; overflow-y: auto;

@@ -17,6 +17,12 @@ const STORAGE_FILE = 'dropedit:fileName'
 const HISTORY_CAP = 100          // max undo depth (each entry is a full project snapshot)
 const COALESCE_MS = 450          // typing-burst window: text-input edits within this collapse to one step
 
+// keyboard-shortcut hints shown in button labels (⌘ on mac, ^ elsewhere)
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
+const MOD = IS_MAC ? '⌘' : '^'
+const SHIFT_MOD = IS_MAC ? '⇧⌘' : '^⇧'
+const DEL_KEY = IS_MAC ? '⌫' : 'Del'
+
 // Last project + filename saved to localStorage, or null if none / unavailable.
 function readStored(): { text: string; name: string } | null {
   if (typeof localStorage === 'undefined') return null
@@ -50,6 +56,8 @@ export function App() {
   const history = useRef<{ stack: string[]; index: number }>({ stack: [text ?? CLEAN_INIT], index: 0 })
   const pendingText = useRef<string | null>(null) // latest coalescing (typed) text not yet committed
   const coalesceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [histVer, setHistVer] = useState(0) // bumped on history change so undo/redo buttons re-evaluate
+  const bumpHist = () => setHistVer((v) => v + 1)
 
   const doc = useMemo(() => (text != null ? parseJson(text) : null), [text])
   const layers = doc ? readLayers(doc) : []
@@ -73,6 +81,7 @@ export function App() {
     h.stack.push(next)
     if (h.stack.length > HISTORY_CAP) h.stack.shift()
     h.index = h.stack.length - 1
+    bumpHist()
   }
   // commit any in-progress typing burst as its own history entry + localStorage write
   function flushPending() {
@@ -100,14 +109,14 @@ export function App() {
     const h = history.current
     if (h.index <= 0) return
     h.index--; const t = h.stack[h.index]
-    setText(t); persistProject(t)
+    setText(t); persistProject(t); bumpHist()
   }
   function redo() {
     flushPending()
     const h = history.current
     if (h.index >= h.stack.length - 1) return
     h.index++; const t = h.stack[h.index]
-    setText(t); persistProject(t)
+    setText(t); persistProject(t); bumpHist()
   }
 
   function loadProject(file: File) {
@@ -117,7 +126,7 @@ export function App() {
   function loadInit(t: string, name: string) {
     flushPending()
     setText(t); setFileName(name); persistProject(t, name); setSelection([]); setLayer(0)
-    history.current = { stack: [t], index: 0 }
+    history.current = { stack: [t], index: 0 }; bumpHist()
   }
   function onUploadCsv(index: number, file: File) {
     file.text().then((t) => {
@@ -190,6 +199,9 @@ export function App() {
   const hasSnp = selection.some((k) => splitKey(k)[0] === 'snp')
   const canCopy = hasPositional || hasSnp
   const canPaste = !!clipboard && (clipboard.kind === 'snapshot' ? hasSnp : hasPositional)
+  void histVer // re-render trigger: the history stack lives in a ref, so read it after each bump
+  const canUndo = history.current.index > 0
+  const canRedo = history.current.index < history.current.stack.length - 1
   function doCopy() {
     if (!text) return
     // snapshots and controls are separate families; copy whichever the selection is.
@@ -264,8 +276,10 @@ export function App() {
         <button onClick={() => loadInit(CLEAN_INIT, 'clean-init.json')}>Clean Init</button>
         <button onClick={() => loadInit(DAW_INIT, 'daw-init.json')}>DAW Init</button>
         <button onClick={save} disabled={!text}>Download</button>
-        <span className="grow" />
         <span className="muted">{text ? fileName : 'no project loaded'}</span>
+        <span className="grow" />
+        <button onClick={undo} disabled={!canUndo}>Undo<span className="sc">{MOD}Z</span></button>
+        <button onClick={redo} disabled={!canRedo}>Redo<span className="sc">{SHIFT_MOD}Z</span></button>
       </header>
 
       {!doc ? (
@@ -291,9 +305,9 @@ export function App() {
                 </div>
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="ops">
-                  <button onClick={doCopy} disabled={!canCopy}>Copy</button>
-                  <button onClick={doPaste} disabled={!canPaste}>Paste</button>
-                  <button onClick={doDelete} disabled={selection.length === 0}>Delete</button>
+                  <button onClick={doCopy} disabled={!canCopy}>Copy<span className="sc">{MOD}C</span></button>
+                  <button onClick={doPaste} disabled={!canPaste}>Paste<span className="sc">{MOD}V</span></button>
+                  <button onClick={doDelete} disabled={selection.length === 0}>Delete<span className="sc">{DEL_KEY}</span></button>
                 </div>
               </div>
             </div>
