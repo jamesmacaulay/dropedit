@@ -32,6 +32,9 @@ bun run build    # tsc --noEmit && vite build  → dist/
 
 (Plain npm works too: `npm install && npm run dev`.)
 
+For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working guide, and
+[`docs/drop-format.md`](docs/drop-format.md) documents the reverse-engineered Drop `.json` format.
+
 ## How it works
 
 - **`src/model/`** — pure TypeScript, no DOM, fully unit-tested:
