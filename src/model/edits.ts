@@ -8,7 +8,8 @@ import {
 } from './jsonDoc'
 import {
   layerOfId, withLayer, parseControlId, formatControlId, hasRow, isPositional, COLS, ROWS,
-  type ControlType, type ControlPos,
+  snapshotPos, formatSnapshotId, SNP_COLS, SNP_ROWS,
+  type ControlType,
 } from './controlId'
 import { makeCsvRef, type PresetParam } from './presetDb'
 import { selGroupLocation } from './dropProject'
@@ -427,11 +428,14 @@ export interface SelectedControl {
   id: string
 }
 
-const rowOf = (p: ControlPos) => p.row ?? 0
+type GridPos = { col: number; row?: number }
+type PasteTarget = { type: ControlType; id: string; valueText: string | null }
+
+const rowOf = (p: GridPos) => p.row ?? 0
 
 /** The anchor of a selection: the position in the topmost row, then the leftmost column. */
-function anchorOf(positions: ControlPos[]): { col: number; row: number } | null {
-  let a: ControlPos | null = null
+function anchorOf(positions: GridPos[]): { col: number; row: number } | null {
+  let a: GridPos | null = null
   for (const p of positions) {
     if (!a || rowOf(p) < rowOf(a) || (rowOf(p) === rowOf(a) && p.col < a.col)) a = p
   }
@@ -440,6 +444,24 @@ function anchorOf(positions: ControlPos[]): { col: number; row: number } | null 
 
 const positionsOf = (sel: SelectedControl[]) =>
   sel.filter((s) => isPositional(s.type)).map((s) => parseControlId(s.type, s.id))
+
+/** Write each target's value to its slot, removing the slot for null values. Targets whose
+ *  destination already holds the pasted value are skipped, so a paste-in-place is a true no-op. */
+function applyPasteTargets(text: string, targets: PasteTarget[]): string {
+  let cur = text
+  for (const t of targets) {
+    const doc = parseJson(cur)
+    const obj = getObject(doc.root, ['map', t.type])
+    const m = obj && getMember(obj, t.id)
+    const curText = m ? cur.slice(m.value.span.start, m.value.span.end) : null
+    if (t.valueText == null) {
+      if (curText != null) cur = removeControl(cur, t.type, t.id) // clear an emptied position
+    } else if (curText !== t.valueText) {
+      cur = pasteControl(cur, t.type, t.id, t.valueText) // skip when already identical (no-op)
+    }
+  }
+  return cur
+}
 
 /** Capture the selected positional controls, keyed by anchor-relative offset.
  *  Empty selected positions are captured as null so paste can clear their destination. */
@@ -474,7 +496,7 @@ export function copyControls(text: string, sel: SelectedControl[]): CopiedContro
  *  selection back onto itself is a true no-op. */
 export function pasteControls(text: string, clip: CopiedControl[], destSel: SelectedControl[], layer: number): string {
   if (!clip.length || !destSel.length) return text
-  const targets: { type: ControlType; id: string; valueText: string | null }[] = []
+  const targets: PasteTarget[] = []
 
   if (clip.length === 1) {
     const src = clip[0]
@@ -494,18 +516,54 @@ export function pasteControls(text: string, clip: CopiedControl[], destSel: Sele
       targets.push({ type: e.type, id, valueText: e.valueText })
     }
   }
+  return applyPasteTargets(text, targets)
+}
 
-  let cur = text
-  for (const t of targets) {
-    const doc = parseJson(cur)
-    const obj = getObject(doc.root, ['map', t.type])
-    const m = obj && getMember(obj, t.id)
-    const curText = m ? cur.slice(m.value.span.start, m.value.span.end) : null
-    if (t.valueText == null) {
-      if (curText != null) cur = removeControl(cur, t.type, t.id) // clear an emptied position
-    } else if (curText !== t.valueText) {
-      cur = pasteControl(cur, t.type, t.id, t.valueText) // skip when already identical (no-op)
+// ---- snapshot copy / paste (same anchor model, but on the bank's 4x5 grid) ----
+// Snapshots are positional within a bank (the bank plays the layer's role). Copy keys each
+// selected snapshot to its offset from the topmost-row leftmost selected snapshot; paste lays
+// the block down at (destination anchor + offset) within `bank`. A single copied snapshot
+// broadcasts to every selected slot. Off-grid targets drop; paste-in-place is a no-op.
+
+const snapPositionsOf = (sel: SelectedControl[]) =>
+  sel.filter((s) => s.type === 'snp').map((s) => snapshotPos(s.id))
+
+export function copySnapshots(text: string, sel: SelectedControl[]): CopiedControl[] {
+  const snps = sel.filter((s) => s.type === 'snp')
+  const anchor = anchorOf(snapPositionsOf(sel))
+  if (!anchor) return []
+  const doc = parseJson(text)
+  const obj = getObject(doc.root, ['map', 'snp'])
+  return snps.map((s) => {
+    const p = snapshotPos(s.id)
+    const m = obj && getMember(obj, s.id)
+    return {
+      type: 'snp' as ControlType,
+      dCol: p.col - anchor.col,
+      dRow: p.row - anchor.row,
+      valueText: m ? text.slice(m.value.span.start, m.value.span.end) : null,
+    }
+  })
+}
+
+export function pasteSnapshots(text: string, clip: CopiedControl[], destSel: SelectedControl[], bank: number): string {
+  const dest = destSel.filter((s) => s.type === 'snp')
+  if (!clip.length || !dest.length) return text
+  const targets: PasteTarget[] = []
+
+  if (clip.length === 1) {
+    const src = clip[0]
+    if (src.valueText == null) return text
+    for (const d of dest) targets.push({ type: 'snp', id: d.id, valueText: src.valueText })
+  } else {
+    const anchor = anchorOf(dest.map((s) => snapshotPos(s.id)))
+    if (!anchor) return text
+    for (const e of clip) {
+      const col = anchor.col + e.dCol
+      const row = anchor.row + e.dRow
+      if (col < 0 || col >= SNP_COLS || row < 0 || row >= SNP_ROWS) continue
+      targets.push({ type: 'snp', id: formatSnapshotId(bank, col, row), valueText: e.valueText })
     }
   }
-  return cur
+  return applyPasteTargets(text, targets)
 }

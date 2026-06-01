@@ -5,7 +5,8 @@ import { dirname, join } from 'node:path'
 import { load, readControl, readLayers, readDevices, mappedIds, readStateValue, readGroupMember, selGroupLocation } from '../src/model/dropProject'
 import {
   setControlField, setSlotField, bulkSetSlotField, assignParam, createControl, removeControl,
-  setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls, formatValue, setStateValue,
+  setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls,
+  copySnapshots, pasteSnapshots, formatValue, setStateValue,
   addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember,
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
@@ -327,5 +328,51 @@ describe('multi-control copy / paste (positional)', () => {
     const out = obj(pasteControls(EXP, clip, sel('rotary:160', 'rotary:170'), 1))
     expect(out.map.rotary['160'].name).toBe('AMOUNT') // anchor lands
     expect(Object.keys(out.map.rotary).filter((k) => k[0] === '1' && Number(k[1]) > 7)).toHaveLength(0)
+  })
+})
+
+describe('snapshot copy / paste / delete (positional within a bank)', () => {
+  // OLD has snapshots in bank 00: 0000-0003 (col0), 0010-0012 (col1), 0020 (col2)
+  const sel = (...ks: string[]) => ks.map((k) => { const i = k.indexOf(':'); return { type: k.slice(0, i) as any, id: k.slice(i + 1) } })
+
+  it('keys copies to anchor offsets within the bank (id = bank,col,row)', () => {
+    const clip = copySnapshots(OLD, sel('snp:0000', 'snp:0001')) // col0 row0 / row1 -> anchor 0000
+    expect(clip).toHaveLength(2)
+    expect(clip.find((c) => c.dCol === 0 && c.dRow === 0)!.valueText).toContain('SNP 01-1-1')
+    expect(clip.find((c) => c.dCol === 0 && c.dRow === 1)!.valueText).toContain('SNP 01-1-2')
+  })
+
+  it('pastes a block at the destination anchor in another bank', () => {
+    const clip = copySnapshots(OLD, sel('snp:0000', 'snp:0001'))
+    // dest anchor in bank 1 at col2,row3 -> 0123 ; second lands at col2,row4 -> 0124
+    const out = obj(pasteSnapshots(OLD, clip, sel('snp:0123'), 1))
+    expect(out.map.snp['0123'].name).toBe('SNP 01-1-1')
+    expect(out.map.snp['0124'].name).toBe('SNP 01-1-2')
+    expect(out.map.snp['0000'].name).toBe('SNP 01-1-1') // source intact
+  })
+
+  it('broadcasts a single copied snapshot onto every selected slot', () => {
+    const clip = copySnapshots(OLD, sel('snp:0000')) // 1 item -> broadcast
+    const out = obj(pasteSnapshots(OLD, clip, sel('snp:0010', 'snp:0011'), 0))
+    expect(out.map.snp['0010'].name).toBe('SNP 01-1-1')
+    expect(out.map.snp['0011'].name).toBe('SNP 01-1-1')
+  })
+
+  it('pasting a snapshot selection back onto itself is a no-op', () => {
+    const s = sel('snp:0000', 'snp:0002', 'snp:0010')
+    expect(pasteSnapshots(OLD, copySnapshots(OLD, s), s, 0)).toBe(OLD)
+  })
+
+  it('drops snapshot paste targets that fall off the 4x5 grid', () => {
+    const clip = copySnapshots(OLD, sel('snp:0000', 'snp:0020')) // cols 0 and 2, anchor col0
+    const out = obj(pasteSnapshots(OLD, clip, sel('snp:0030'), 0)) // anchor col3 -> +2 col5 off-grid
+    expect(out.map.snp['0030'].name).toBe('SNP 01-1-1')           // anchor lands
+    expect(Object.keys(out.map.snp).filter((k) => Number(k[2]) > 3)).toHaveLength(0)
+  })
+
+  it('deletes snapshots via removeControl', () => {
+    const out = obj(removeControl(OLD, 'snp', '0000'))
+    expect(out.map.snp['0000']).toBeUndefined()
+    expect(out.map.snp['0001'].name).toBe('SNP 01-1-2') // siblings intact
   })
 })

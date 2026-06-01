@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   parseControlId, formatControlId, withLayer, controlIdsForLayer, layerOfId, hasRow,
+  snapshotPos, formatSnapshotId, withBank,
 } from '../src/model/controlId'
 
 describe('controlId', () => {
@@ -51,5 +52,14 @@ describe('controlId', () => {
     expect(hasRow('rotbut')).toBe(true)
     expect(hasRow('fader')).toBe(false)
     expect(hasRow('mute')).toBe(false)
+  })
+
+  it('handles snapshot ids: bank(2)/col/row', () => {
+    expect(snapshotPos('0023')).toEqual({ col: 2, row: 3 })
+    expect(snapshotPos('1910')).toEqual({ col: 1, row: 0 }) // bank 19
+    expect(formatSnapshotId(0, 2, 3)).toBe('0023')
+    expect(formatSnapshotId(19, 1, 0)).toBe('1910')
+    expect(withBank('0023', 5)).toBe('0523') // re-target bank, keep col/row (bank-switch primitive)
+    expect(withBank('0523', 0)).toBe('0023')
   })
 })

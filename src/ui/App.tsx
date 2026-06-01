@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseJson } from '../model/jsonDoc'
 import { readLayers, readDevices } from '../model/dropProject'
-import { copyControlText, pasteControl, copyControls, pasteControls, removeControl, createControl, setDeviceCsv, type CopiedControl } from '../model/edits'
+import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, type CopiedControl } from '../model/edits'
 import { parseBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
-import { isPositional, withLayer, type ControlType } from '../model/controlId'
+import { isPositional, withLayer, withBank, type ControlType } from '../model/controlId'
 import { Surface, selKey } from './Surface'
 import { SnapshotGrid } from './SnapshotGrid'
 import { Sidebar } from './Sidebar'
@@ -38,7 +38,7 @@ export function App() {
   const [layer, setLayer] = useState(0)
   const [bank, setBank] = useState(0)
   const [selection, setSelection] = useState<string[]>([])
-  const [clipboard, setClipboard] = useState<CopiedControl[] | null>(null)
+  const [clipboard, setClipboard] = useState<{ kind: 'control' | 'snapshot'; items: CopiedControl[] } | null>(null)
   const [deviceEditorOpen, setDeviceEditorOpen] = useState(false)
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
@@ -126,16 +126,36 @@ export function App() {
     }))
     setLayer(next)
   }
+  // snapshots are positional within a bank the same way controls are within a layer:
+  // switching banks re-targets the snapshot selection to the same slots in the new bank.
+  function switchBank(next: number) {
+    setSelection((sel) => sel.map((k) => {
+      const [type, id] = splitKey(k)
+      return type === 'snp' ? selKey('snp', withBank(id, next)) : k
+    }))
+    setBank(next)
+  }
   const selControls = () => selection.map(splitKey).map(([type, id]) => ({ type, id }))
   const hasPositional = selection.some((k) => isPositional(splitKey(k)[0]))
+  const hasSnp = selection.some((k) => splitKey(k)[0] === 'snp')
+  const canCopy = hasPositional || hasSnp
+  const canPaste = !!clipboard && (clipboard.kind === 'snapshot' ? hasSnp : hasPositional)
   function doCopy() {
-    if (!text || !hasPositional) return
-    const clip = copyControls(text, selControls())
-    if (clip.some((c) => c.valueText != null)) setClipboard(clip)
+    if (!text) return
+    // snapshots and controls are separate families; copy whichever the selection is.
+    if (hasSnp && !hasPositional) {
+      const items = copySnapshots(text, selControls())
+      if (items.some((c) => c.valueText != null)) setClipboard({ kind: 'snapshot', items })
+    } else if (hasPositional) {
+      const items = copyControls(text, selControls())
+      if (items.some((c) => c.valueText != null)) setClipboard({ kind: 'control', items })
+    }
   }
   function doPaste() {
-    if (!text || !clipboard || !hasPositional) return
-    apply(pasteControls(text, clipboard, selControls(), layer))
+    if (!text || !canPaste) return
+    apply(clipboard!.kind === 'snapshot'
+      ? pasteSnapshots(text, clipboard!.items, selControls(), bank)
+      : pasteControls(text, clipboard!.items, selControls(), layer))
   }
   function doDelete() {
     if (!text || selection.length === 0) return
@@ -146,7 +166,7 @@ export function App() {
 
   // Keyboard shortcuts for the selection. Skipped while a form field is focused so ordinary
   // text editing (and text copy/paste) is left alone.
-  //   Ctrl/Cmd+C / +V — copy / paste (only when a positional control is selected)
+  //   Ctrl/Cmd+C / +V — copy / paste the selection (controls or snapshots)
   //   Backspace / Delete — delete the selection (same as the Delete button)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -158,12 +178,12 @@ export function App() {
       }
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
-      if (k === 'c' && hasPositional) { e.preventDefault(); doCopy() }
-      else if (k === 'v' && clipboard && hasPositional) { e.preventDefault(); doPaste() }
+      if (k === 'c' && canCopy) { e.preventDefault(); doCopy() }
+      else if (k === 'v' && canPaste) { e.preventDefault(); doPaste() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [text, selection, clipboard, layer])
+  }, [text, selection, clipboard, layer, bank])
 
   return (
     <div className="app">
@@ -193,7 +213,7 @@ export function App() {
           <section className="stage" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
             <div className="board" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
               <div className="left-col">
-                <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={setBank} />
+                <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={switchBank} />
                 <button className="devices-btn" onClick={() => setDeviceEditorOpen(true)}>Devices…</button>
                 <div className="layers">
                   {Array.from({ length: LAYERS }, (_, i) => (
@@ -206,8 +226,8 @@ export function App() {
               <div className="right-col">
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="ops">
-                  <button onClick={doCopy} disabled={!hasPositional}>Copy</button>
-                  <button onClick={doPaste} disabled={!clipboard || !hasPositional}>Paste</button>
+                  <button onClick={doCopy} disabled={!canCopy}>Copy</button>
+                  <button onClick={doPaste} disabled={!canPaste}>Paste</button>
                   <button onClick={doDelete} disabled={selection.length === 0}>Delete</button>
                 </div>
               </div>

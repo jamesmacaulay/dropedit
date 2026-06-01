@@ -66,3 +66,21 @@ export function controlIdsForLayer(type: ControlType, layer: number): string[] {
 export function isPositional(type: ControlType): boolean {
   return POSITIONAL.has(type)
 }
+
+// ---- snapshots --------------------------------------------------------------
+// snp id = "<bank:2><col><row>" on a 4-col x 5-row grid per bank (banks 0-19).
+// Snapshots are a separate positional grid: the bank plays the role the layer plays
+// for controls, and the (col,row) within it is the position preserved across banks.
+export const SNP_COLS = 4
+export const SNP_ROWS = 5
+
+export function snapshotPos(id: string): { col: number; row: number } {
+  return { col: Number(id[2]), row: Number(id[3]) }
+}
+export function formatSnapshotId(bank: number, col: number, row: number): string {
+  return `${String(bank).padStart(2, '0')}${col}${row}`
+}
+/** Rewrite the bank of a snapshot id (used when switching banks keeps the selection). */
+export function withBank(id: string, bank: number): string {
+  return `${String(bank).padStart(2, '0')}${id.slice(2)}`
+}
