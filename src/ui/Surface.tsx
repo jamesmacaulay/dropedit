@@ -115,7 +115,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
   }
 
   return (
-    <svg width={width} height={height} role="img" aria-label={`Drop layer ${layer + 1}`} className="surface"
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Drop layer ${layer + 1}`} className="surface"
       style={{ background: '#1b1b1f', borderRadius: 10, maxWidth: '100%' }}>
       {cells}
     </svg>

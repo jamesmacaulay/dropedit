@@ -26,6 +26,7 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .workspace { display: flex; gap: 16px; padding: 16px; flex: 1; min-height: 0; align-items: stretch; overflow: hidden; }
 .stage { flex: 1; min-width: 520px; min-height: 0; overflow: auto; }
 .surface, .surface text { user-select: none; -webkit-user-select: none; }
+.surface { height: auto; } /* with the SVG viewBox, scale proportionally to the container width */
 .surface text.lbl:hover { fill: #e7e9ee; }
 .board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
 .left-col { display: flex; flex-direction: column; gap: 10px; }
@@ -94,3 +95,16 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
 .pad.empty { background: #26262c; }
 .pad.sel { outline: 2px solid #fff; outline-offset: 1px; }
 .pad:hover { border-color: var(--accent); }
+
+/* ---- mobile / narrow viewports: stack the layout and scroll the page ---- */
+@media (max-width: 820px) {
+  .app { height: auto; min-height: 100vh; overflow: visible; }
+  .workspace { flex-direction: column; align-items: stretch; overflow: visible;
+    padding: 12px; gap: 12px; }
+  .stage { min-width: 0; overflow: visible; }
+  .board { flex-direction: column; align-items: stretch; gap: 14px; }
+  .left-col, .right-col { width: 100%; }
+  .sidebar { width: 100%; flex: 1 1 auto; overflow: visible; }
+  .sidebar .tabs { position: static; } /* the page scrolls now, so don't pin to the viewport */
+  .device-grid { grid-template-columns: 1fr 1fr; } /* 4 cols is too cramped on a phone */
+}
