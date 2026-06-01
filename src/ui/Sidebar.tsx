@@ -20,7 +20,9 @@ export interface SidebarProps {
   deviceFor: (target: number) => PresetDevice | null
   selection: string[]
   defaultColId: number
-  onChange: (newText: string) => void
+  // coalesce=true marks a rapid text/number-input edit: the view updates now, but the history
+  // entry + localStorage write are debounced so a typing burst collapses to one undo step.
+  onChange: (newText: string, coalesce?: boolean) => void
   onSetActive: (targets: { type: ControlType; id: string }[], active: boolean) => void
 }
 
@@ -67,7 +69,7 @@ function SnapshotEditor({ text, doc, id, defaultColId, onChange }: SidebarProps 
       {!exists && <p className="hint">Empty pad — “Save” captures the current control values into a new snapshot here.</p>}
       {exists && (
         <>
-          <label>Name<input type="text" value={view!.name} onChange={(e) => onChange(setControlField(text, 'snp', id, 'name', e.target.value))} /></label>
+          <label>Name<input type="text" value={view!.name} onChange={(e) => onChange(setControlField(text, 'snp', id, 'name', e.target.value), true)} /></label>
           <label>Pad color
             <select value={String(view!.colId)} onChange={(e) => onChange(setControlField(text, 'snp', id, 'colId', Number(e.target.value)))}>
               {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
@@ -102,10 +104,10 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const feedbId = shared(targets, (t) => t.view?.feedbId)
   const stateVal = shared(targets, (t) => readStateValue(doc, t.type, t.id))
 
-  const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v))
+  const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v), true)
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))
-  const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v))
-  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t) }
+  const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v), true)
+  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t, true) }
   const numFld = (labelTxt: string, val: number | typeof MULTI | undefined, onSet: (v: number) => void) => (
     <label>{labelTxt}<input type="number" value={val === MULTI || val === undefined ? '' : (val as number)} placeholder={val === MULTI ? '[multiple]' : ''} onChange={(e) => e.target.value !== '' && onSet(Number(e.target.value))} /></label>
   )
@@ -152,7 +154,7 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
 
 interface SlotEntry { type: ControlType; id: string; mapped: boolean; slot: SlotView | undefined }
 
-function SlotList({ text, targets, deviceFor, devices, defaultColId, onChange }: { text: string; targets: Target[]; deviceFor: (t: number) => PresetDevice | null; devices: DeviceView[]; defaultColId: number; onChange: (t: string) => void }) {
+function SlotList({ text, targets, deviceFor, devices, defaultColId, onChange }: { text: string; targets: Target[]; deviceFor: (t: number) => PresetDevice | null; devices: DeviceView[]; defaultColId: number; onChange: (t: string, coalesce?: boolean) => void }) {
   const count = 8 // a Drop control has up to 8 output slots; show them all
   const rows: ReactNode[] = []
   for (let i = 0; i < count; i++) {
@@ -190,14 +192,14 @@ function SlotList({ text, targets, deviceFor, devices, defaultColId, onChange }:
   return <>{rows}</>
 }
 
-function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: string; entries: { type: ControlType; id: string; slot: SlotView }[]; deviceFor: (t: number) => PresetDevice | null; devices: DeviceView[]; onChange: (t: string) => void }) {
+function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: string; entries: { type: ControlType; id: string; slot: SlotView }[]; deviceFor: (t: number) => PresetDevice | null; devices: DeviceView[]; onChange: (t: string, coalesce?: boolean) => void }) {
   const slots = entries.map((e) => e.slot)
   // params come from the slot's TARGET device's CSV (uses the first selected slot's target)
   const device = deviceFor(slots[0].target)
   const sh = <K extends keyof SlotView>(k: K): SlotView[K] | typeof MULTI => {
     const f = slots[0][k]; return slots.every((s) => s[k] === f) ? f : MULTI
   }
-  const set = (f: keyof SlotView, v: number) => { let t = text; for (const e of entries) t = setSlotField(t, e.type, e.id, e.slot.key, f as string, v); onChange(t) }
+  const set = (f: keyof SlotView, v: number, coalesce = false) => { let t = text; for (const e of entries) t = setSlotField(t, e.type, e.id, e.slot.key, f as string, v); onChange(t, coalesce) }
   const setParam = (rowIndex: number) => { const p = device?.byRowIndex.get(rowIndex); if (!p) return; let t = text; for (const e of entries) t = setSlotParam(t, e.type, e.id, e.slot.key, p); onChange(t) }
 
   // reflect the shared current param (csvRef low-16 = row, confirmed by cc)
@@ -207,7 +209,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
 
   const num = (labelTxt: string, field: keyof SlotView, extra: Record<string, number> = {}) => {
     const v = sh(field)
-    return <label>{labelTxt}<input type="number" {...extra} value={v === MULTI ? '' : (v as number)} placeholder={v === MULTI ? '[multiple]' : ''} onChange={(e) => e.target.value !== '' && set(field, Number(e.target.value))} /></label>
+    return <label>{labelTxt}<input type="number" {...extra} value={v === MULTI ? '' : (v as number)} placeholder={v === MULTI ? '[multiple]' : ''} onChange={(e) => e.target.value !== '' && set(field, Number(e.target.value), true)} /></label>
   }
   const sel = (labelTxt: string, field: keyof SlotView, options: ReactNode) => {
     const v = sh(field)
@@ -239,7 +241,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   )
 }
 
-function SelectionGroups({ text, doc, targets, onChange }: { text: string; doc: JsonDoc; targets: { type: ControlType; id: string }[]; onChange: (t: string) => void }) {
+function SelectionGroups({ text, doc, targets, onChange }: { text: string; doc: JsonDoc; targets: { type: ControlType; id: string }[]; onChange: (t: string, coalesce?: boolean) => void }) {
   const editable = targets.filter((t) => t.type !== 'snp')
   if (!editable.length) return null
   return (

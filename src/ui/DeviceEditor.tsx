@@ -14,7 +14,7 @@ export interface DeviceEditorProps {
   text: string
   doc: JsonDoc
   deviceFor: (index: number) => PresetDevice | null
-  onChange: (t: string) => void
+  onChange: (t: string, coalesce?: boolean) => void // coalesce=true debounces text/number-input edits
   onUploadCsv: (index: number, file: File) => void
   onClose: () => void
 }
@@ -26,7 +26,7 @@ function bundledIdFor(path: string, file: string): string {
 
 export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onClose }: DeviceEditorProps) {
   const devices = readDevices(doc)
-  const set = (i: number, f: string, v: string | number) => onChange(setDeviceField(text, i, f, v))
+  const set = (i: number, f: string, v: string | number, coalesce = false) => onChange(setDeviceField(text, i, f, v), coalesce)
   const portSel = (i: number, f: 'portOut' | 'portIn', v: number) => (
     <select value={v} onChange={(e) => set(i, f, Number(e.target.value))}>
       {PORTS.map((p) => <option key={p.v} value={p.v}>{p.l}</option>)}
@@ -50,12 +50,12 @@ export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onCl
                   <label className="chk"><input type="checkbox" checked={!!d.inUse} onChange={(e) => set(d.index, 'inUse', e.target.checked ? 1 : 0)} /> {`Device ${d.index + 1}`}</label>
                 </legend>
                 <div className="device-grid">
-                  <label>Name<input type="text" value={d.name} onChange={(e) => set(d.index, 'name', e.target.value)} /></label>
-                  <label>Channel<input type="number" min={1} max={16} value={d.ch} onChange={(e) => set(d.index, 'ch', Number(e.target.value))} /></label>
+                  <label>Name<input type="text" value={d.name} onChange={(e) => set(d.index, 'name', e.target.value, true)} /></label>
+                  <label>Channel<input type="number" min={1} max={16} value={d.ch} onChange={(e) => set(d.index, 'ch', Number(e.target.value), true)} /></label>
                   <label>Out port{portSel(d.index, 'portOut', d.portOut)}</label>
                   <label>In port{portSel(d.index, 'portIn', d.portIn)}</label>
-                  <label>Cable out<input type="number" min={0} value={d.cableIdOut} onChange={(e) => set(d.index, 'cableIdOut', Number(e.target.value))} /></label>
-                  <label>Cable in<input type="number" min={0} value={d.cableIdIn} onChange={(e) => set(d.index, 'cableIdIn', Number(e.target.value))} /></label>
+                  <label>Cable out<input type="number" min={0} value={d.cableIdOut} onChange={(e) => set(d.index, 'cableIdOut', Number(e.target.value), true)} /></label>
+                  <label>Cable in<input type="number" min={0} value={d.cableIdIn} onChange={(e) => set(d.index, 'cableIdIn', Number(e.target.value), true)} /></label>
                 </div>
                 <div className="device-csv">
                   <label>Preset CSV

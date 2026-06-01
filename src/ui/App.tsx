@@ -14,6 +14,8 @@ import { CLEAN_INIT, DAW_INIT } from '../data/inits'
 const LAYERS = 8
 const STORAGE_KEY = 'dropedit:project'
 const STORAGE_FILE = 'dropedit:fileName'
+const HISTORY_CAP = 100          // max undo depth (each entry is a full project snapshot)
+const COALESCE_MS = 450          // typing-burst window: text-input edits within this collapse to one step
 
 // Last project + filename saved to localStorage, or null if none / unavailable.
 function readStored(): { text: string; name: string } | null {
@@ -43,6 +45,11 @@ export function App() {
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
   const inactiveStore = useRef<Map<string, string>>(new Map())
+  // undo/redo: stack of committed project snapshots (== the sequence of localStorage writes).
+  // Text-input edits coalesce into one entry via a debounce; discrete edits commit immediately.
+  const history = useRef<{ stack: string[]; index: number }>({ stack: [text ?? CLEAN_INIT], index: 0 })
+  const pendingText = useRef<string | null>(null) // latest coalescing (typed) text not yet committed
+  const coalesceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const doc = useMemo(() => (text != null ? parseJson(text) : null), [text])
   const layers = doc ? readLayers(doc) : []
@@ -59,15 +66,58 @@ export function App() {
   }, [doc, uploads])
   const deviceFor = (t: number) => devicePresets.get(t) ?? null
 
-  // every edit returns new project text; persist it so the view, the download, and the
-  // restored-on-reload copy are always the same bytes.
-  function apply(next: string) { setText(next); persistProject(next) }
+  function pushHistory(next: string) {
+    const h = history.current
+    if (next === h.stack[h.index]) return // no change to record
+    h.stack = h.stack.slice(0, h.index + 1) // drop any redo branch
+    h.stack.push(next)
+    if (h.stack.length > HISTORY_CAP) h.stack.shift()
+    h.index = h.stack.length - 1
+  }
+  // commit any in-progress typing burst as its own history entry + localStorage write
+  function flushPending() {
+    if (coalesceTimer.current != null) { clearTimeout(coalesceTimer.current); coalesceTimer.current = null }
+    if (pendingText.current != null) {
+      const t = pendingText.current; pendingText.current = null
+      pushHistory(t); persistProject(t)
+    }
+  }
+  // discrete edit: commit immediately (its own undo step) and persist.
+  function apply(next: string) {
+    flushPending()
+    setText(next); pushHistory(next); persistProject(next)
+  }
+  // text-input edit: update the view now, but debounce the history entry + localStorage write so a
+  // burst of typing collapses into a single undo step / single persisted update.
+  function applyLive(next: string) {
+    setText(next)
+    pendingText.current = next
+    if (coalesceTimer.current != null) clearTimeout(coalesceTimer.current)
+    coalesceTimer.current = setTimeout(flushPending, COALESCE_MS)
+  }
+  function undo() {
+    flushPending()
+    const h = history.current
+    if (h.index <= 0) return
+    h.index--; const t = h.stack[h.index]
+    setText(t); persistProject(t)
+  }
+  function redo() {
+    flushPending()
+    const h = history.current
+    if (h.index >= h.stack.length - 1) return
+    h.index++; const t = h.stack[h.index]
+    setText(t); persistProject(t)
+  }
 
   function loadProject(file: File) {
     file.text().then((t) => loadInit(t, file.name))
   }
+  // loading a project is a fresh start: reset the undo history to it.
   function loadInit(t: string, name: string) {
+    flushPending()
     setText(t); setFileName(name); persistProject(t, name); setSelection([]); setLayer(0)
+    history.current = { stack: [t], index: 0 }
   }
   function onUploadCsv(index: number, file: File) {
     file.text().then((t) => {
@@ -166,12 +216,20 @@ export function App() {
 
   // Keyboard shortcuts for the selection. Skipped while a form field is focused so ordinary
   // text editing (and text copy/paste) is left alone.
+  //   Ctrl/Cmd+Z — undo ; Ctrl/Cmd+Shift+Z (or Ctrl+Y) — redo (work anywhere, even in a field)
   //   Ctrl/Cmd+C / +V — copy / paste the selection (controls or snapshots)
   //   Backspace / Delete — delete the selection (same as the Delete button)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
-      if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return
+      const inField = !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)
+      // undo/redo apply globally (a field's own value is part of the project, so its edit is undoable)
+      if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+        const k = e.key.toLowerCase()
+        if (k === 'z') { e.preventDefault(); (e.shiftKey ? redo : undo)(); if (inField) el!.blur(); return }
+        if (k === 'y' && !e.shiftKey) { e.preventDefault(); redo(); if (inField) el!.blur(); return }
+      }
+      if (inField) return
       if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (selection.length) { e.preventDefault(); doDelete() }
         return
@@ -184,6 +242,13 @@ export function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [text, selection, clipboard, layer, bank])
+
+  // persist any pending typed text if the tab is closed mid-burst
+  useEffect(() => {
+    const flush = () => flushPending()
+    window.addEventListener('beforeunload', flush)
+    return () => window.removeEventListener('beforeunload', flush)
+  }, [])
 
   return (
     <div className="app">
@@ -233,12 +298,12 @@ export function App() {
               </div>
             </div>
           </section>
-          <Sidebar text={text!} doc={doc} deviceFor={deviceFor} selection={selection} defaultColId={layers[layer]?.colId ?? 0} onChange={apply} onSetActive={setActive} />
+          <Sidebar text={text!} doc={doc} deviceFor={deviceFor} selection={selection} defaultColId={layers[layer]?.colId ?? 0} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onSetActive={setActive} />
         </div>
       )}
 
       {doc && deviceEditorOpen && (
-        <DeviceEditor text={text!} doc={doc} deviceFor={deviceFor} onChange={apply} onUploadCsv={onUploadCsv} onClose={() => setDeviceEditorOpen(false)} />
+        <DeviceEditor text={text!} doc={doc} deviceFor={deviceFor} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onUploadCsv={onUploadCsv} onClose={() => setDeviceEditorOpen(false)} />
       )}
     </div>
   )
