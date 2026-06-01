@@ -116,7 +116,8 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Drop layer ${layer + 1}`} className="surface"
-      style={{ background: '#1b1b1f', borderRadius: 10, maxWidth: '100%' }}>
+      style={{ background: '#1b1b1f', borderRadius: 10, maxWidth: '100%' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onSelect([], false) }}>
       {cells}
     </svg>
   )

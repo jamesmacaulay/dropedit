@@ -53,7 +53,7 @@ describe('UI smoke (renderToString, no DOM)', () => {
     const grid = renderToString(<SnapshotGrid doc={doc} bank={0} selected={new Set()} onSelect={() => {}} onPickBank={() => {}} />)
     expect(grid).toContain('Snapshots')
     expect(grid).toContain('class="pad')
-    expect(grid).toContain('Bank 1') // bank toggle button
+    expect(grid).toContain('Banks') // bank toggle button
     const side = renderToString(<Sidebar text={OLD} doc={doc} deviceFor={() => null} selection={['snp:0000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
     expect(side).toContain('Snapshot 0000')
     expect(side).toContain('SNP 01-1-1') // its name

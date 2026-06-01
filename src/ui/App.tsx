@@ -144,13 +144,19 @@ export function App() {
     apply(t)
   }
 
-  // Ctrl/Cmd+C / +V copy & paste the selection. Only when a positional control is selected
-  // (so ordinary text copy/paste and form fields are left alone).
+  // Keyboard shortcuts for the selection. Skipped while a form field is focused so ordinary
+  // text editing (and text copy/paste) is left alone.
+  //   Ctrl/Cmd+C / +V — copy / paste (only when a positional control is selected)
+  //   Backspace / Delete — delete the selection (same as the Delete button)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const el = e.target as HTMLElement | null
       if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return
+      if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (selection.length) { e.preventDefault(); doDelete() }
+        return
+      }
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
       if (k === 'c' && hasPositional) { e.preventDefault(); doCopy() }
       else if (k === 'v' && clipboard && hasPositional) { e.preventDefault(); doPaste() }
@@ -183,14 +189,12 @@ export function App() {
         </main>
       ) : (
         <div className="workspace">
-          <section className="stage">
-            <div className="board">
+          {/* clicking empty canvas (the stage/board background itself, not a control) clears the selection */}
+          <section className="stage" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
+            <div className="board" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
               <div className="left-col">
                 <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={setBank} />
                 <button className="devices-btn" onClick={() => setDeviceEditorOpen(true)}>Devices…</button>
-              </div>
-              <div className="right-col">
-                <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="layers">
                   {Array.from({ length: LAYERS }, (_, i) => (
                     <button key={i} className={i === layer ? 'active' : ''} onClick={() => switchLayer(i)}>
@@ -198,9 +202,12 @@ export function App() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="right-col">
+                <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
                 <div className="ops">
                   <button onClick={doCopy} disabled={!hasPositional}>Copy</button>
-                  <button onClick={doPaste} disabled={!clipboard || !hasPositional}>{clipboard && clipboard.length > 1 ? 'Paste' : 'Paste here'}</button>
+                  <button onClick={doPaste} disabled={!clipboard || !hasPositional}>Paste</button>
                   <button onClick={doDelete} disabled={selection.length === 0}>Delete</button>
                 </div>
               </div>

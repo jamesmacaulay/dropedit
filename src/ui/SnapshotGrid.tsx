@@ -61,7 +61,7 @@ export function SnapshotGrid({ doc, bank, selected, onSelect, onPickBank }: Snap
     <div className="snapshots">
       <div className="snp-head">
         <h3>{bankMode ? 'Select bank' : 'Snapshots'}</h3>
-        <button className="bankbtn" onClick={() => setBankMode((m) => !m)}>{bankMode ? 'Cancel' : `Bank ${bank + 1}`}</button>
+        <button className="bankbtn" onClick={() => setBankMode((m) => !m)}>{bankMode ? 'Cancel' : 'Banks'}</button>
       </div>
       <div className="snp-grid">{rows}</div>
     </div>
