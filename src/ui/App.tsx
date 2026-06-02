@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseJson } from '../model/jsonDoc'
 import { readLayers, readDevices } from '../model/dropProject'
 import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, type CopiedControl } from '../model/edits'
-import { parseBundledByPathFile } from '../data/devices'
+import { loadBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
 import { isPositional, withLayer, withBank, type ControlType } from '../model/controlId'
 import { Surface, selKey } from './Surface'
@@ -61,16 +61,22 @@ export function App() {
 
   const doc = useMemo(() => (text != null ? parseJson(text) : null), [text])
   const layers = doc ? readLayers(doc) : []
-  // resolve each target device's preset CSV (per-device upload wins, else bundled by csvPath/csvFile)
-  const devicePresets = useMemo(() => {
-    const m = new Map<number, PresetDevice>()
-    if (!doc) return m
-    for (const d of readDevices(doc)) {
-      const up = uploads.get(d.index)
-      if (up) { m.set(d.index, up); continue }
-      if (d.csvInUse && d.csvFile) { const pd = parseBundledByPathFile(d.csvPath, d.csvFile); if (pd) m.set(d.index, pd) }
-    }
-    return m
+  // resolve each target device's preset CSV (per-device upload wins, else bundled by csvPath/csvFile).
+  // bundled CSVs load lazily, so this resolves asynchronously into state.
+  const [devicePresets, setDevicePresets] = useState<Map<number, PresetDevice>>(new Map())
+  useEffect(() => {
+    if (!doc) { setDevicePresets(new Map()); return }
+    let cancelled = false
+    ;(async () => {
+      const m = new Map<number, PresetDevice>()
+      for (const d of readDevices(doc)) {
+        const up = uploads.get(d.index)
+        if (up) { m.set(d.index, up); continue }
+        if (d.csvInUse && d.csvFile) { const pd = await loadBundledByPathFile(d.csvPath, d.csvFile); if (pd) m.set(d.index, pd) }
+      }
+      if (!cancelled) setDevicePresets(m)
+    })()
+    return () => { cancelled = true }
   }, [doc, uploads])
   const deviceFor = (t: number) => devicePresets.get(t) ?? null
 

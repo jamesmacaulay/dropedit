@@ -58,7 +58,12 @@ src/ui/      React (prop-driven; easy to render-test)
   SnapshotGrid.tsx  4x5 snapshot pads + bank selector.
   DeviceEditor.tsx  modal to edit the 8 target devices + their preset CSVs.
   palette.ts      the Drop's 12 colour names/hexes (colId order).
-src/data/    devices.ts + devices/<Manufacturer>/<Device>.csv  — bundled preset DB (imported ?raw).
+src/data/    devices.ts + devices/<Manufacturer>/<Device>.csv  — bundled preset DB.
+                  ~393 CSVs vendored from pencilresearch/midi (CC-BY-SA-4.0), loaded LAZILY via
+                  import.meta.glob (one chunk per CSV — main bundle stays small). BUNDLED_DEVICES is
+                  the synchronous manifest; loadBundled / loadBundledByPathFile are async. Refresh
+                  with `node scripts/sync-midi-db.mjs` (vendored at a pinned commit; see SOURCE.md).
+                  inits.ts + clean-init/daw-init.json — starter projects (imported ?raw).
 test/        vitest specs; fixtures/ are REAL Drop projects (deluge-exp, old-daw-init, empty-template).
 ```
 
@@ -102,7 +107,9 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
   independent) — but verify on hardware.
 - **Snapshot save scope:** `saveSnapshot` currently captures *all* of `state`. On hardware a snapshot
   stores only the controls in the **selection group** used to save it — make it selection-group-aware.
-- Only `Synthstrom/Deluge.csv` is bundled; add more device CSVs (from the `midi-main` database).
+- The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
+  pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so upstream
+  typos ship as-is (e.g. Deluge "Delay/Amonut") — fix upstream, not locally, to keep the sync clean.
 - **Not verified on real hardware.** Encourage loading a generated `.json` on an actual Drop.
 
 ## Conventions

@@ -8,7 +8,7 @@ import { Surface } from '../src/ui/Surface'
 import { Sidebar } from '../src/ui/Sidebar'
 import { SnapshotGrid } from '../src/ui/SnapshotGrid'
 import { parseJson } from '../src/model/jsonDoc'
-import { parseBundled } from '../src/data/devices'
+import { loadBundled } from '../src/data/devices'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const EXP = readFileSync(join(here, 'fixtures', 'deluge-exp.json'), 'utf8')
@@ -31,9 +31,9 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('AMOUNT') // a control name label
   })
 
-  it('Sidebar single selection: general tab + tab bar', () => {
+  it('Sidebar single selection: general tab + tab bar', async () => {
     const doc = parseJson(EXP)
-    const device = parseBundled('synthstrom-deluge')!
+    const device = (await loadBundled('synthstrom-deluge'))!
     const html = renderToString(<Sidebar text={EXP} doc={doc} deviceFor={() => device} selection={['rotary:000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
     expect(html).toContain('AMOUNT') // general tab: control name
     expect(html).toContain('General')

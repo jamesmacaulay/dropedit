@@ -2,7 +2,14 @@ import type { JsonDoc } from '../model/jsonDoc'
 import { readDevices } from '../model/dropProject'
 import type { PresetDevice } from '../model/presetDb'
 import { setDeviceField, setDeviceCsv } from '../model/edits'
-import { BUNDLED_DEVICES } from '../data/devices'
+import { BUNDLED_DEVICES, type BundledDevice } from '../data/devices'
+
+// bundled devices grouped by manufacturer for the (now ~400-entry) preset dropdown
+const BUNDLED_GROUPS: [string, BundledDevice[]][] = (() => {
+  const m = new Map<string, BundledDevice[]>()
+  for (const b of BUNDLED_DEVICES) { const g = m.get(b.manufacturer) ?? []; g.push(b); m.set(b.manufacturer, g) }
+  return [...m.entries()]
+})()
 
 // Ports are 1-indexed with 0 = off (Deluge's portOut 3 = TRS1, per hardware).
 const PORTS: { v: number; l: string }[] = [
@@ -64,7 +71,11 @@ export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onCl
                       else { const b = BUNDLED_DEVICES.find((x) => x.id === e.target.value); if (b) onChange(setDeviceCsv(text, d.index, b.path, b.file)) }
                     }}>
                       <option value="">— none —</option>
-                      {BUNDLED_DEVICES.map((b) => <option key={b.id} value={b.id}>{b.manufacturer} {b.device}</option>)}
+                      {BUNDLED_GROUPS.map(([manufacturer, items]) => (
+                        <optgroup key={manufacturer} label={manufacturer}>
+                          {items.map((b) => <option key={b.id} value={b.id}>{b.device}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </label>
                   <label className="btn">Upload CSV<input type="file" accept=".csv" hidden onChange={(e) => e.target.files?.[0] && onUploadCsv(d.index, e.target.files[0])} /></label>

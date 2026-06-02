@@ -11,7 +11,7 @@ import {
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
 import type { PresetParam } from '../src/model/presetDb'
-import { parseBundledByPathFile } from '../src/data/devices'
+import { loadBundledByPathFile } from '../src/data/devices'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const EXP = readFileSync(join(here, 'fixtures', 'deluge-exp.json'), 'utf8')
@@ -196,11 +196,11 @@ describe('devices', () => {
     const cleared = setDeviceCsv(out, 2, '', '')
     expect(obj(cleared).device['2']).toMatchObject({ csvInUse: 0, csvFile: '' })
   })
-  it('resolves bundled CSV by path/file', () => {
-    const d = parseBundledByPathFile('/midi-main/Synthstrom', 'Deluge.csv')
+  it('resolves bundled CSV by path/file', async () => {
+    const d = await loadBundledByPathFile('/midi-main/Synthstrom', 'Deluge.csv')
     expect(d?.device).toBe('Deluge')
     expect((d?.params.length ?? 0)).toBeGreaterThan(100)
-    expect(parseBundledByPathFile('/midi-main/Whatever', 'Nope.csv')).toBeNull()
+    expect(await loadBundledByPathFile('/midi-main/Whatever', 'Nope.csv')).toBeNull()
   })
 })
 
