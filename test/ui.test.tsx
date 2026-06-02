@@ -52,6 +52,9 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('General')
     expect(html).toContain('Output slots')
     expect(html).toContain('Groups')
+    // Behavior is now a decoded dropdown (behavId 1 = Dynamic Pot) with a Custom fallback
+    expect(html).toContain('Dynamic Pot')
+    expect(html).toContain('Custom…')
   })
 
   it('Sidebar shows [multiple values] across a heterogeneous selection', () => {

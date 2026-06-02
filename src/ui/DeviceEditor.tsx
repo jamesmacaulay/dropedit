@@ -2,7 +2,9 @@ import type { JsonDoc } from '../model/jsonDoc'
 import { readDevices } from '../model/dropProject'
 import type { PresetDevice } from '../model/presetDb'
 import { setDeviceField, setDeviceCsv } from '../model/edits'
+import { PORT } from '../model/enums'
 import { BUNDLED_DEVICES, type BundledDevice } from '../data/devices'
+import { EnumField } from './EnumField'
 
 // bundled devices grouped by manufacturer for the (now ~400-entry) preset dropdown
 const BUNDLED_GROUPS: [string, BundledDevice[]][] = (() => {
@@ -10,12 +12,6 @@ const BUNDLED_GROUPS: [string, BundledDevice[]][] = (() => {
   for (const b of BUNDLED_DEVICES) { const g = m.get(b.manufacturer) ?? []; g.push(b); m.set(b.manufacturer, g) }
   return [...m.entries()]
 })()
-
-// Ports are 1-indexed with 0 = off (Deluge's portOut 3 = TRS1, per hardware).
-const PORTS: { v: number; l: string }[] = [
-  { v: 0, l: 'Off' }, { v: 1, l: 'USB1' }, { v: 2, l: 'USB2' },
-  { v: 3, l: 'TRS1' }, { v: 4, l: 'TRS2' }, { v: 5, l: 'TRS3' }, { v: 6, l: 'TRS4' },
-]
 
 export interface DeviceEditorProps {
   text: string
@@ -34,12 +30,6 @@ function bundledIdFor(path: string, file: string): string {
 export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onClose }: DeviceEditorProps) {
   const devices = readDevices(doc)
   const set = (i: number, f: string, v: string | number, coalesce = false) => onChange(setDeviceField(text, i, f, v), coalesce)
-  const portSel = (i: number, f: 'portOut' | 'portIn', v: number) => (
-    <select value={v} onChange={(e) => set(i, f, Number(e.target.value))}>
-      {PORTS.map((p) => <option key={p.v} value={p.v}>{p.l}</option>)}
-      {!PORTS.some((p) => p.v === v) && <option value={v}>{`port ${v}`}</option>}
-    </select>
-  )
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -59,10 +49,10 @@ export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onCl
                 <div className="device-grid">
                   <label>Name<input type="text" value={d.name} onChange={(e) => set(d.index, 'name', e.target.value, true)} /></label>
                   <label>Channel<input type="number" min={1} max={16} value={d.ch} onChange={(e) => set(d.index, 'ch', Number(e.target.value), true)} /></label>
-                  <label>Out port{portSel(d.index, 'portOut', d.portOut)}</label>
-                  <label>In port{portSel(d.index, 'portIn', d.portIn)}</label>
-                  <label>Cable out<input type="number" min={0} value={d.cableIdOut} onChange={(e) => set(d.index, 'cableIdOut', Number(e.target.value), true)} /></label>
-                  <label>Cable in<input type="number" min={0} value={d.cableIdIn} onChange={(e) => set(d.index, 'cableIdIn', Number(e.target.value), true)} /></label>
+                  <EnumField label="Out port" map={PORT} value={d.portOut} onSet={(v) => set(d.index, 'portOut', v, true)} />
+                  <EnumField label="In port" map={PORT} value={d.portIn} onSet={(v) => set(d.index, 'portIn', v, true)} />
+                  <label>Virt. cable out<input type="number" min={1} value={d.cableIdOut + 1} onChange={(e) => e.target.value !== '' && set(d.index, 'cableIdOut', Math.max(0, Number(e.target.value) - 1), true)} /></label>
+                  <label>Virt. cable in<input type="number" min={1} value={d.cableIdIn + 1} onChange={(e) => e.target.value !== '' && set(d.index, 'cableIdIn', Math.max(0, Number(e.target.value) - 1), true)} /></label>
                 </div>
                 <div className="device-csv">
                   <label>Preset CSV

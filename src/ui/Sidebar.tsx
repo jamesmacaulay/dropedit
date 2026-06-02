@@ -7,7 +7,8 @@ import {
 import type { ControlType } from '../model/controlId'
 import type { PresetDevice } from '../model/presetDb'
 import { paramLabel } from '../model/presetDb'
-import { MSG_TYPE, BEHAV, labelOf } from '../model/enums'
+import { MSG_TYPE, BEHAV, FEEDB, CURVE } from '../model/enums'
+import { EnumField } from './EnumField'
 import { COLOR_NAMES } from './palette'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
@@ -111,9 +112,6 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))
   const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v), true)
   const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t, true) }
-  const numFld = (labelTxt: string, val: number | typeof MULTI | undefined, onSet: (v: number) => void) => (
-    <label>{labelTxt}<input type="number" value={val === MULTI || val === undefined ? '' : (val as number)} placeholder={val === MULTI ? '[multiple]' : ''} onChange={(e) => e.target.value !== '' && onSet(Number(e.target.value))} /></label>
-  )
 
   return (
     <aside className="sidebar">
@@ -138,9 +136,12 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
                     {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
                   </select>
                 </label>
-                {numFld('Behavior (behavId)', behavId, (v) => onField('behavId', v))}
-                {behavId !== MULTI && behavId !== undefined && <p className="meta">{labelOf(BEHAV, behavId as number)}</p>}
-                {numFld('LED style (feedbId)', feedbId, (v) => onField('feedbId', v))}
+                <EnumField key={`behav-${selection.join('|')}`} label="Behavior" map={BEHAV}
+                  value={behavId === MULTI || behavId === undefined ? undefined : (behavId as number)} multi={behavId === MULTI}
+                  onSet={(v) => onField('behavId', v)} />
+                <EnumField key={`feedb-${selection.join('|')}`} label="LED style" map={FEEDB}
+                  value={feedbId === MULTI || feedbId === undefined ? undefined : (feedbId as number)} multi={feedbId === MULTI}
+                  onSet={(v) => onField('feedbId', v)} />
                 <label>Current value (state)<input type="number" step={0.001} value={stateVal === MULTI || stateVal === undefined ? '' : (stateVal as number)} placeholder={stateVal === MULTI ? '[multiple]' : 'unset'} onChange={(e) => e.target.value !== '' && onStateVal(Number(e.target.value))} /></label>
               </>
             )}
@@ -238,7 +239,9 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       {num('Channel', 'ch', { min: 1, max: 16 })}
       {num('Min out', 'minOut')}
       {num('Max out', 'maxOut')}
-      {num('Curve', 'curveId')}
+      <EnumField key={`curve-${entries.map((e) => e.id + ':' + e.slot.key).join(',')}`} label="Curve" map={CURVE}
+        value={sh('curveId') === MULTI ? undefined : (sh('curveId') as number)} multi={sh('curveId') === MULTI}
+        onSet={(v) => set('curveId', v, true)} />
       {num('csvRef', 'csvRef')}
     </div>
   )
