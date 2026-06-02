@@ -25,6 +25,12 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('pencilresearch/midi')
     expect(html).toContain('CC')
     expect(html).toContain('creativecommons.org/licenses/by-sa/4.0')
+    // header has the GitHub source link; undo/redo moved out of the header into the ops row
+    const header = html.slice(0, html.indexOf('class="workspace"'))
+    expect(header).toContain('github.com/jamesmacaulay/dropedit')
+    expect(header).not.toContain('Undo')
+    expect(html).toContain('Undo') // still rendered (now under the control layout)
+    expect(html).toContain('Redo')
   })
 
   it('Surface renders controls for a loaded project', () => {
