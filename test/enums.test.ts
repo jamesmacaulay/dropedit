@@ -22,6 +22,10 @@ describe('slot Min/Max scaling', () => {
     expect(displayToStored(-8192, 5)).toBe(0)
     expect(displayToStored(8191, 5)).toBe(16383)
   })
+  it('treats Program Change value as a 0-127 program number', () => {
+    expect(storedToDisplay(9933, 9)).toBe(77)   // captured: Program 77 -> maxOut 9933
+    expect(storedToDisplay(11352, 10)).toBe(88) // captured: Program+Bank 88 -> maxOut 11352
+  })
 })
 
 describe('Flex curve XY packing', () => {

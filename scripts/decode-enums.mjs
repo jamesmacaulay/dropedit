@@ -160,9 +160,9 @@ const SECTIONS = [
       '    OUTPUT Type as listed (use the distinctive number so it’s easy to spot). We dump the snp\n' +
       '    entry to find WHERE the message type/number live (scene "data" is omitted).',
     rows: [
-      { map: 'snp', id: '0000', label: 'Note On (Note# 61)',      how: 'Bank 1, pad col 1 row 1: save snapshot → Mapping: Type=Note On,        Note#=61' },
+      { map: 'snp', id: '0000', label: 'Note On (Note# 61)',      how: 'Bank 1, pad col 1 row 1: save snapshot → Mapping: Type=Note On,        Note#=61, Velocity=100 (if shown)' },
       { map: 'snp', id: '0001', label: 'Program Change (Prog 77)', how: 'Bank 1, pad col 1 row 2: save snapshot → Mapping: Type=Program Change, Program=77' },
-      { map: 'snp', id: '0002', label: 'Program+Bank (Prog 88)',   how: 'Bank 1, pad col 1 row 3: save snapshot → Mapping: Type=Program+Bank,   Program=88' },
+      { map: 'snp', id: '0002', label: 'Program+Bank (Prog 88)',   how: 'Bank 1, pad col 1 row 3: save snapshot → Mapping: Type=Program+Bank,   Program=88, Bank fields = 5 then 9' },
     ],
   },
 ]

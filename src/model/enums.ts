@@ -1,12 +1,10 @@
 // Human labels for Drop enum fields. Observed values + a raw fallback for the rest.
 // (Not exhaustive — the Drop has more behaviors/curves; UI shows "raw N" when unknown.)
 
-// Message type (msgType), decoded from a hardware capture. `2 = Note On` is inferred from real
-// projects (it wasn't in the enum capture). Snapshot-only types (Program Change / Program+Bank)
-// aren't decoded yet — they show as "Custom" until captured.
+// Message type (msgType), decoded from hardware captures (rotary slots + snapshot pads).
 export const MSG_TYPE: Record<number, string> = {
   2: 'Note On', 3: 'CC', 5: 'Pitch bend', 6: 'Aftertouch',
-  7: 'CC14', 8: 'NRPN', 12: 'CC14 LSB first',
+  7: 'CC14', 8: 'NRPN', 9: 'Program Change', 10: 'Program+Bank', 12: 'CC14 LSB first',
 }
 
 // A slot's Min/Max is stored as a 14-bit value (0-STORE_MAX) spanning the message type's display
@@ -17,6 +15,7 @@ const MSG_RANGE: Record<number, { min: number; max: number }> = {
   2: { min: 0, max: 127 }, 3: { min: 0, max: 127 }, 6: { min: 0, max: 127 }, // Note On / CC / Aftertouch
   5: { min: -8192, max: 8191 },                                              // Pitch bend
   7: { min: 0, max: 16383 }, 8: { min: 0, max: 16383 }, 12: { min: 0, max: 16383 }, // CC14 / NRPN / CC14 LSB
+  9: { min: 0, max: 127 }, 10: { min: 0, max: 127 }, // Program Change / Program+Bank: value (maxOut) = program #
 }
 export function slotRange(msgType: number): { min: number; max: number } {
   return MSG_RANGE[msgType] ?? { min: 0, max: 127 } // sensible default for unknown types
