@@ -98,10 +98,15 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
 
 ## Known unknowns & TODOs
 
-- **Enum name maps unknown:** `behavId`, `feedbId`, `curveId`, and the device **port** enum aren't
-  decoded, so they're edited as raw numbers. Port labels (`0=Off,1=USB1,2=USB2,3=TRS1,4=TRS2,5=TRS3,
-  6=TRS4`) are a tentative guess that matches Deluge's `portOut 3 = TRS1`. To decode any of these:
-  save projects on hardware with each option and diff the JSON.
+- **Enum name maps — decoded** (`enums.ts`: `BEHAV`/`FEEDB`/`CURVE`/`PORT`). `behavId` is one global
+  0-12 enum; `feedbId`/`curveId` codes are firmware-assigned, NOT menu order (`Line from right`=29,
+  `Flex`=33; feedbId 28 is an unused hole used by non-rotary elements). Ports verified `0=Off…6=TRS4`;
+  Virt. Cable is 0-indexed (shown +1). The UI renders these as `EnumField` dropdowns with a "Custom…"
+  entry + raw-value fallback, so unknown/future codes still work. To refresh for a new firmware:
+  build a capture project per `node scripts/decode-enums.mjs instructions`, then
+  `decode <file.json>` and update the maps. Still raw numbers: `msgType` is partially mapped
+  (`MSG_TYPE`); the Flex curve's XY-point storage is unknown (its slot keeps default min/max until
+  the points are edited — capture a non-default Flex to locate it).
 - **`csvRef` high 16 bits** (a checksum/flags) aren't reproduced; only the low-16 CSV row index is
   (verified). Centralized in `presetDb.makeCsvRef`. A control still works without it (CC/ch/name are
   independent) — but verify on hardware.
