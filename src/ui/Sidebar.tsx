@@ -16,7 +16,7 @@ import { EnumField } from './EnumField'
 import { COLOR_NAMES } from './palette'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
-  addSlot, createControl, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember,
+  addSlot, createControl, setSlotParam, setGroupMember,
 } from '../model/edits'
 
 export interface SidebarProps {
@@ -80,13 +80,10 @@ function SnapshotEditor({ text, doc, id, defaultColId, onChange }: SidebarProps 
               {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
             </select>
           </label>
+          <p className="meta">{hasData ? 'Stores values for its selected controls.' : 'No stored values yet.'}</p>
         </>
       )}
-      <div className="snp-actions">
-        <button onClick={() => onChange(saveSnapshot(text, id, exists ? view!.colId : defaultColId))}>{exists ? 'Save (overwrite)' : 'Save (create)'}</button>
-        <button disabled={!hasData} onClick={() => onChange(loadSnapshot(text, id))}>Load</button>
-      </div>
-      <p className="meta">Save = capture current values → this snapshot. Load = recall this snapshot → live state.</p>
+      <p className="meta">Use <strong>Save</strong> / <strong>Jump/Load</strong> below the grid to capture or recall snapshots.</p>
     </aside>
   )
 }

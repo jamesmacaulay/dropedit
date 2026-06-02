@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseJson } from '../model/jsonDoc'
-import { readLayers, readDevices } from '../model/dropProject'
-import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, type CopiedControl } from '../model/edits'
+import { readLayers, readDevices, NUM_SEL_GROUPS } from '../model/dropProject'
+import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, saveSnapshot, loadSnapshot, setGroupMember, toggleGroupMember, type CopiedControl } from '../model/edits'
 import { loadBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
 import { isPositional, withLayer, withBank, type ControlType } from '../model/controlId'
+import { COLOR_NAMES } from './palette'
 import { Surface, selKey } from './Surface'
 import { SnapshotGrid } from './SnapshotGrid'
 import { Sidebar } from './Sidebar'
@@ -51,6 +52,9 @@ export function App() {
   const [bank, setBank] = useState(0)
   const [selection, setSelection] = useState<string[]>([])
   const [clipboard, setClipboard] = useState<{ kind: 'control' | 'snapshot'; items: CopiedControl[] } | null>(null)
+  // snapshot save/load flow: 'save' shows the draft settings + group tint; 'load' recalls on pad click
+  const [snapMode, setSnapMode] = useState<null | 'save' | 'load'>(null)
+  const [snapDraft, setSnapDraft] = useState<{ name: string; colId: number; group: number }>({ name: '', colId: 4, group: 0 })
   const [deviceEditorOpen, setDeviceEditorOpen] = useState(false)
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
@@ -236,6 +240,21 @@ export function App() {
     apply(t)
   }
 
+  // ---- snapshot save / load flow ----
+  // In save mode, a snapshot stores the controls in the chosen selection group (green = included).
+  // Select/Deselect/Toggle edit that group from the current control selection; clicking a pad saves.
+  function doGroup(kind: 'select' | 'deselect' | 'toggle') {
+    if (!text || !hasPositional) return
+    const tg = selControls()
+    apply(kind === 'toggle' ? toggleGroupMember(text, snapDraft.group, tg) : setGroupMember(text, snapDraft.group, tg, kind === 'select'))
+  }
+  function onSnapPad(id: string) {
+    if (!text) return
+    if (snapMode === 'save') apply(saveSnapshot(text, id, snapDraft))
+    else if (snapMode === 'load') apply(loadSnapshot(text, id))
+    setSnapMode(null)
+  }
+
   // Keyboard shortcuts for the selection. Skipped while a form field is focused so ordinary
   // text editing (and text copy/paste) is left alone.
   //   Ctrl/Cmd+Z — undo ; Ctrl/Cmd+Shift+Z (or Ctrl+Y) — redo (work anywhere, even in a field)
@@ -252,10 +271,19 @@ export function App() {
         if (k === 'y' && !e.shiftKey) { e.preventDefault(); redo(); if (inField) el!.blur(); return }
       }
       if (inField) return
+      // snapshot save mode: t/s/d edit the selection group from the current control selection
+      if (snapMode === 'save' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const k = e.key.toLowerCase()
+        if (k === 't') { e.preventDefault(); doGroup('toggle'); return }
+        if (k === 's') { e.preventDefault(); doGroup('select'); return }
+        if (k === 'd') { e.preventDefault(); doGroup('deselect'); return }
+        if (e.key === 'Escape') { e.preventDefault(); setSnapMode(null); return }
+      }
       if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (selection.length) { e.preventDefault(); doDelete() }
         return
       }
+      if (e.key === 'Escape' && snapMode) { setSnapMode(null); return }
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
       if (k === 'c' && canCopy) { e.preventDefault(); doCopy() }
@@ -263,7 +291,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [text, selection, clipboard, layer, bank])
+  }, [text, selection, clipboard, layer, bank, snapMode, snapDraft])
 
   // persist any pending typed text if the tab is closed mid-burst
   useEffect(() => {
@@ -307,7 +335,12 @@ export function App() {
           <section className="stage" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
             <div className="board" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
               <div className="left-col">
-                <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={switchBank} />
+                <SnapshotGrid doc={doc} bank={bank} selected={new Set(selection)} onSelect={onSelect} onPickBank={switchBank}
+                  onPad={snapMode ? onSnapPad : undefined} padHint={snapMode} />
+                <div className="snp-modes">
+                  <button className={snapMode === 'save' ? 'active' : ''} onClick={() => setSnapMode(snapMode === 'save' ? null : 'save')}>Save</button>
+                  <button className={snapMode === 'load' ? 'active' : ''} onClick={() => setSnapMode(snapMode === 'load' ? null : 'load')}>Jump/Load</button>
+                </div>
                 <button className="devices-btn" onClick={() => setDeviceEditorOpen(true)}>Devices…</button>
               </div>
               <div className="right-col">
@@ -318,19 +351,55 @@ export function App() {
                     </button>
                   ))}
                 </div>
-                <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} />
-                <div className="ops">
-                  <button onClick={doCopy} disabled={!canCopy}>Copy<span className="sc">{MOD}C</span></button>
-                  <button onClick={doPaste} disabled={!canPaste}>Paste<span className="sc">{MOD}V</span></button>
-                  <button onClick={doDelete} disabled={selection.length === 0}>Delete<span className="sc">{DEL_KEY}</span></button>
-                  <span className="grow" />
-                  <button onClick={undo} disabled={!canUndo}>Undo<span className="sc">{MOD}Z</span></button>
-                  <button onClick={redo} disabled={!canRedo}>Redo<span className="sc">{SHIFT_MOD}Z</span></button>
-                </div>
+                <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect} saveGroup={snapMode === 'save' ? snapDraft.group : null} />
+                {snapMode === 'save' ? (
+                  <div className="ops">
+                    <span className="muted">Group {snapDraft.group + 1}: green = saved · red = skipped</span>
+                    <span className="grow" />
+                    <button onClick={() => doGroup('toggle')} disabled={!hasPositional}>Toggle<span className="sc">T</span></button>
+                    <button onClick={() => doGroup('select')} disabled={!hasPositional}>Select<span className="sc">S</span></button>
+                    <button onClick={() => doGroup('deselect')} disabled={!hasPositional}>Deselect<span className="sc">D</span></button>
+                  </div>
+                ) : (
+                  <div className="ops">
+                    <button onClick={doCopy} disabled={!canCopy}>Copy<span className="sc">{MOD}C</span></button>
+                    <button onClick={doPaste} disabled={!canPaste}>Paste<span className="sc">{MOD}V</span></button>
+                    <button onClick={doDelete} disabled={selection.length === 0}>Delete<span className="sc">{DEL_KEY}</span></button>
+                    <span className="grow" />
+                    <button onClick={undo} disabled={!canUndo}>Undo<span className="sc">{MOD}Z</span></button>
+                    <button onClick={redo} disabled={!canRedo}>Redo<span className="sc">{SHIFT_MOD}Z</span></button>
+                  </div>
+                )}
               </div>
             </div>
           </section>
-          <Sidebar text={text!} doc={doc} deviceFor={deviceFor} selection={selection} defaultColId={layers[layer]?.colId ?? 0} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onSetActive={setActive} />
+          {snapMode === 'save' ? (
+            <aside className="sidebar">
+              <h2>Save snapshot</h2>
+              <p className="hint">Set the details, choose which controls to include (green), then click a pad to save into it.</p>
+              <label>Name<input type="text" value={snapDraft.name} placeholder="(optional)" onChange={(e) => setSnapDraft((d) => ({ ...d, name: e.target.value }))} /></label>
+              <label>Pad color
+                <select value={String(snapDraft.colId)} onChange={(e) => setSnapDraft((d) => ({ ...d, colId: Number(e.target.value) }))}>
+                  {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
+                </select>
+              </label>
+              <label>Selection group
+                <select value={String(snapDraft.group)} onChange={(e) => setSnapDraft((d) => ({ ...d, group: Number(e.target.value) }))}>
+                  {Array.from({ length: NUM_SEL_GROUPS }, (_, g) => <option key={g} value={g}>Group {g + 1}</option>)}
+                </select>
+              </label>
+              <p className="meta">Select controls on the surface, then Toggle/Select/Deselect (T/S/D) to edit group {snapDraft.group + 1}. Esc to cancel.</p>
+              <button onClick={() => setSnapMode(null)}>Cancel</button>
+            </aside>
+          ) : snapMode === 'load' ? (
+            <aside className="sidebar">
+              <h2>Jump / Load</h2>
+              <p className="hint">Click a snapshot pad to recall it — only the controls it stores are written into the live state.</p>
+              <button onClick={() => setSnapMode(null)}>Cancel</button>
+            </aside>
+          ) : (
+            <Sidebar text={text!} doc={doc} deviceFor={deviceFor} selection={selection} defaultColId={layers[layer]?.colId ?? 0} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onSetActive={setActive} />
+          )}
         </div>
       )}
 

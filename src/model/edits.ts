@@ -12,7 +12,7 @@ import {
   type ControlType,
 } from './controlId'
 import { makeCsvRef, type PresetParam } from './presetDb'
-import { selGroupLocation } from './dropProject'
+import { selGroupLocation, readGroupMember } from './dropProject'
 import { CONTROL_DEFAULTS } from './enums'
 
 const SECTION_TYPES: ControlType[] = ['rotary', 'rotbut', 'fader', 'mute']
@@ -274,34 +274,53 @@ function prettyScene(v: unknown, tabs: number): string {
   return JSON.stringify(v)
 }
 
-function sceneFromState(parsed: any): Record<string, unknown> {
+// Capture the current state values for just the controls in selection `group` (the green ones).
+// A snapshot only stores its selected controls, so loading it later recalls only those.
+function sceneFromGroup(parsed: any, doc: JsonDoc, group: number): Record<string, Record<string, unknown>> {
   const s = parsed.state ?? {}
-  return { rotary: s.rotary ?? {}, rotbut: s.rotbut ?? {}, mute: s.mute ?? {}, fader: s.fader ?? {} }
+  const out: Record<string, Record<string, unknown>> = {}
+  for (const type of SECTION_TYPES) {
+    const src = (s[type] ?? {}) as Record<string, unknown>
+    const dst: Record<string, unknown> = {}
+    for (const id of Object.keys(src)) {
+      if (readGroupMember(doc, group, type, id)) dst[id] = src[id]
+    }
+    out[type] = dst
+  }
+  return out
 }
 
 /** Capture the current `state` values into a snapshot's `data` (creating the snapshot if absent). */
-export function saveSnapshot(text: string, id: string, colId = 0): string {
+export interface SaveSnapshotOpts { group: number; colId?: number; name?: string }
+
+// Save the current state of selection `group`'s controls into snapshot `id`, also setting its
+// name/colour. Overwrites an existing pad's data + name/colour, or creates a new entry.
+export function saveSnapshot(text: string, id: string, opts: SaveSnapshotOpts): string {
+  const { group, colId = 0, name } = opts
   const parsed = JSON.parse(text)
-  const scene = sceneFromState(parsed)
-  const doc = parseJson(text)
-  const snpSection = getObject(doc.root, ['map', 'snp'])
-  if (!snpSection) return text
-  const existing = getObject(doc.root, ['map', 'snp', id])
-  if (existing) {
-    const dataMember = getMember(existing, 'data')
-    const keyTabs = memberKeyTabs(text, existing)
-    const sceneText = prettyScene(scene, keyTabs)
-    if (dataMember) {
-      return applyEdits(text, [{ start: dataMember.value.span.start, end: dataMember.value.span.end, text: sceneText }])
-    }
-    return applyEdits(text, [editInsertMember(text, existing, 'data', sceneText)])
+  if (!parsed.map?.snp) return text
+  const scene = sceneFromGroup(parsed, parseJson(text), group)
+
+  if (parsed.map.snp[id]) {
+    let cur = text
+    if (name != null) cur = setControlField(cur, 'snp', id, 'name', name)
+    cur = setControlField(cur, 'snp', id, 'colId', colId)
+    const doc = parseJson(cur)
+    const entry = getObject(doc.root, ['map', 'snp', id])!
+    const dataMember = getMember(entry, 'data')
+    const sceneText = prettyScene(scene, memberKeyTabs(cur, entry))
+    return dataMember
+      ? applyEdits(cur, [{ start: dataMember.value.span.start, end: dataMember.value.span.end, text: sceneText }])
+      : applyEdits(cur, [editInsertMember(cur, entry, 'data', sceneText)])
   }
   // create a new snapshot entry
+  const doc = parseJson(text)
+  const snpSection = getObject(doc.root, ['map', 'snp'])!
   const tabs = memberKeyTabs(text, snpSection) + 1
   const t = '\t'.repeat(tabs)
   const value = [
     '{',
-    `${t}"name": ${JSON.stringify('SNP ' + id)},`,
+    `${t}"name": ${JSON.stringify(name || 'SNP ' + id)},`,
     `${t}"colId": ${colId},`,
     `${t}"dropOrder": 1,`,
     `${t}"behavId": 4,`,
@@ -314,21 +333,17 @@ export function saveSnapshot(text: string, id: string, colId = 0): string {
   return applyEdits(text, [editInsertMember(text, snpSection, id, value)])
 }
 
-/** Recall a snapshot's stored scene into the live `state` section. */
+// Recall a snapshot into live state — MERGING: only the controls the snapshot stores are written,
+// the rest of the state is left as-is (the Drop's Jump behaviour).
 export function loadSnapshot(text: string, id: string): string {
-  const parsed = JSON.parse(text)
-  const data = parsed.map?.snp?.[id]?.data
+  const data = JSON.parse(text).map?.snp?.[id]?.data
   if (!data) return text
-  const doc = parseJson(text)
-  const stateObj = getObject(doc.root, ['state'])
-  if (!stateObj) return text
-  const keyTabs = memberKeyTabs(text, stateObj)
-  const edits: Edit[] = []
-  for (const type of ['rotary', 'rotbut', 'mute', 'fader']) {
-    const node = getPath(doc.root, ['state', type])
-    if (node) edits.push({ start: node.span.start, end: node.span.end, text: prettyScene(data[type] ?? {}, keyTabs) })
+  let cur = text
+  for (const type of SECTION_TYPES) {
+    const vals = (data[type] ?? {}) as Record<string, number>
+    for (const ctrlId of Object.keys(vals)) cur = setStateValue(cur, type, ctrlId, vals[ctrlId])
   }
-  return applyEdits(text, edits)
+  return cur
 }
 
 // ---- assign a preset param to ONE slot -----------------------------------
@@ -358,6 +373,28 @@ export function setGroupMember(text: string, group: number, targets: FieldTarget
   const edits: Edit[] = []
   for (const e of acc.values()) {
     const v = included ? (e.value | e.mask) : (e.value & ~e.mask)
+    if (v !== e.value) edits.push(editSetScalar(e.node, formatValue(v, e.node.raw)))
+  }
+  return applyEdits(text, edits)
+}
+
+// Flip each target's membership in `group` (green<->red), per-control.
+export function toggleGroupMember(text: string, group: number, targets: FieldTarget[]): string {
+  const doc = parseJson(text)
+  const acc = new Map<number, { node: ScalarNode; value: number; mask: number }>()
+  for (const t of targets) {
+    const pos = parseControlId(t.type, t.id)
+    const loc = selGroupLocation(t.type, pos.layer, pos.col, pos.row ?? 0)
+    if (!loc) continue
+    const node = scalarAt(doc, ['settings', 'selGroup', String(group), 'data', loc.index])
+    if (!node) continue
+    let e = acc.get(loc.index)
+    if (!e) { e = { node, value: typeof node.value === 'number' ? node.value : 0, mask: 0 }; acc.set(loc.index, e) }
+    e.mask ^= loc.mask // xor so each distinct control bit flips once
+  }
+  const edits: Edit[] = []
+  for (const e of acc.values()) {
+    const v = e.value ^ e.mask
     if (v !== e.value) edits.push(editSetScalar(e.node, formatValue(v, e.node.raw)))
   }
   return applyEdits(text, edits)

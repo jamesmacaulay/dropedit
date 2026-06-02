@@ -7,7 +7,7 @@ import {
   setControlField, setSlotField, bulkSetSlotField, assignParam, createControl, removeControl,
   setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls,
   copySnapshots, pasteSnapshots, formatValue, setStateValue,
-  addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember,
+  addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember, toggleGroupMember,
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
 import type { PresetParam } from '../src/model/presetDb'
@@ -161,26 +161,36 @@ describe('output slots', () => {
 })
 
 describe('snapshots', () => {
-  it('saves current state into an existing snapshot data', () => {
-    const stateFader = obj(OLD).state.fader
-    const out = saveSnapshot(OLD, '0000')
-    expect(obj(out).map.snp['0000'].data.fader).toEqual(stateFader)
-    expect(obj(out).map.snp['0000'].data.rotary).toEqual(obj(OLD).state.rotary)
-    expect(obj(out).map.snp['0000'].name).toBe('SNP 01-1-1') // chrome untouched
+  // OLD's selection group 0 has every control selected (selGroup.0.data is all 0xff).
+  it('save is selection-group-aware: deselected controls are excluded from the snapshot', () => {
+    let t = setStateValue(OLD, 'fader', '00', 100)
+    t = setStateValue(t, 'fader', '01', 50)
+    t = setGroupMember(t, 0, [{ type: 'fader', id: '01' }], false) // remove fader 01 from group 0
+    const out = obj(saveSnapshot(t, '0044', { group: 0, colId: 7, name: 'Grp' }))
+    expect(out.map.snp['0044']).toMatchObject({ behavId: 4, colId: 7, name: 'Grp' })
+    expect(out.map.snp['0044'].data.fader['00']).toBe(100)        // still a group member
+    expect(out.map.snp['0044'].data.fader['01']).toBeUndefined()  // excluded from the group
   })
-  it('creates a snapshot at an empty pad, capturing state', () => {
-    expect(obj(OLD).map.snp['0044']).toBeUndefined()
-    const out = saveSnapshot(OLD, '0044', 7)
-    expect(obj(out).map.snp['0044']).toMatchObject({ behavId: 4, colId: 7, name: 'SNP 0044' })
-    expect(obj(out).map.snp['0044'].data.fader).toEqual(obj(OLD).state.fader)
+  it('overwrites an existing pad data + name/colour', () => {
+    const out = obj(saveSnapshot(OLD, '0000', { group: 0, colId: 5, name: 'Renamed' }))
+    expect(out.map.snp['0000']).toMatchObject({ colId: 5, name: 'Renamed' })
+    expect(out.map.snp['0000'].data.fader).toEqual(obj(OLD).state.fader) // group 0 = all controls
   })
-  it('loads a snapshot scene into live state', () => {
-    const snapData = obj(OLD).map.snp['0000'].data
-    const out = loadSnapshot(OLD, '0000')
-    expect(obj(out).state.fader).toEqual(snapData.fader)
-    expect(obj(out).state.rotary).toEqual(snapData.rotary)
-    // mappings untouched
-    expect(obj(out).map.rotary['100'].name).toBe('ROT B-1-1')
+  it('load MERGES: controls absent from the snapshot keep their live value', () => {
+    let t = setStateValue(OLD, 'fader', '00', 100)
+    t = setGroupMember(t, 0, [{ type: 'fader', id: '01' }], false) // 01 excluded
+    t = saveSnapshot(t, '0044', { group: 0 })                      // snapshot omits fader 01
+    t = setStateValue(t, 'fader', '00', 5)                         // change live values after saving
+    t = setStateValue(t, 'fader', '01', 777)
+    const out = obj(loadSnapshot(t, '0044'))
+    expect(out.state.fader['00']).toBe(100) // recalled from the snapshot
+    expect(out.state.fader['01']).toBe(777) // untouched — not stored in the snapshot
+  })
+  it('toggleGroupMember flips membership per control', () => {
+    expect(readGroupMember(load(OLD), 0, 'fader', '00')).toBe(true) // group 0 starts all-selected
+    const t = toggleGroupMember(OLD, 0, [{ type: 'fader', id: '00' }])
+    expect(readGroupMember(load(t), 0, 'fader', '00')).toBe(false)
+    expect(readGroupMember(load(toggleGroupMember(t, 0, [{ type: 'fader', id: '00' }])), 0, 'fader', '00')).toBe(true)
   })
 })
 

@@ -1,16 +1,21 @@
 import type { ReactNode } from 'react'
 import type { JsonDoc } from '../model/jsonDoc'
-import { readControl } from '../model/dropProject'
-import { COLS, ROWS } from '../model/controlId'
+import { readControl, readGroupMember } from '../model/dropProject'
+import { COLS, ROWS, type ControlType } from '../model/controlId'
 import { colorFor } from './palette'
 
 export const selKey = (type: string, id: string) => `${type}:${id}`
+
+// snapshot save mode: controls tint by membership in the active selection group
+const SAVE_GREEN = '#22c55e', SAVE_RED = '#ef4444'
 
 export interface SurfaceProps {
   doc: JsonDoc
   layer: number
   selected: Set<string>
   onSelect: (keys: string[], additive: boolean) => void
+  /** when set, tint each control green (in this selection group) / red (not) — snapshot save mode */
+  saveGroup?: number | null
 }
 
 const PAD = 16, LEFT = 46, COLW = 104, ROT_R = 19, ROT_GAP = 56, TOP = 48, MUTE_H = 24, FADER_H = 120
@@ -20,7 +25,12 @@ function trunc(s: string): string {
   return s.length > 12 ? s.slice(0, 11) + '…' : s
 }
 
-export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
+export function Surface({ doc, layer, selected, onSelect, saveGroup }: SurfaceProps) {
+  // in save mode, a control's fill shows group membership (green/red); else its colour or empty grey
+  const fillFor = (type: ControlType, id: string, view: { colId: number } | undefined, empty: string) => {
+    if (saveGroup != null) return readGroupMember(doc, saveGroup, type, id) ? SAVE_GREEN : SAVE_RED
+    return view ? colorFor(view.colId) : empty
+  }
   const colX = (col: number) => PAD + LEFT + col * COLW + COLW / 2
   const rotCY = (row: number) => TOP + row * ROT_GAP + ROT_R
   const muteY = TOP + ROWS * ROT_GAP + 12
@@ -81,10 +91,10 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
       const bsel = selected.has(selKey('rotbut', id))
       cells.push(
         <g key={`r${id}`}>
-          <circle cx={cx} cy={cy} r={ROT_R} fill={rot ? colorFor(rot.colId) : '#26262c'}
+          <circle cx={cx} cy={cy} r={ROT_R} fill={fillFor('rotary', id, rot, '#26262c')}
             stroke={rsel ? '#fff' : '#54545e'} strokeWidth={rsel ? 3 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => onSelect([selKey('rotary', id)], e.shiftKey)} />
-          <circle cx={cx} cy={cy} r={5} fill={rb ? colorFor(rb.colId) : '#141418'}
+          <circle cx={cx} cy={cy} r={5} fill={saveGroup != null ? (rb ? fillFor('rotbut', id, rb, '#141418') : '#141418') : (rb ? colorFor(rb.colId) : '#141418')}
             stroke={bsel ? '#fff' : '#3a3a42'} strokeWidth={bsel ? 2 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => { e.stopPropagation(); onSelect([selKey('rotbut', id)], e.shiftKey) }} />
           <text x={cx} y={cy + ROT_R + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{rot ? trunc(rot.name) : ''}</text>
@@ -96,7 +106,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
     const msel = selected.has(selKey('mute', lc))
     cells.push(
       <g key={`m${lc}`}>
-        <rect x={cx - 17} y={muteY} width={34} height={MUTE_H} rx={6} fill={mv ? colorFor(mv.colId) : '#26262c'}
+        <rect x={cx - 17} y={muteY} width={34} height={MUTE_H} rx={6} fill={fillFor('mute', lc, mv, '#26262c')}
           stroke={msel ? '#fff' : '#54545e'} strokeWidth={msel ? 3 : 1} style={{ cursor: 'pointer' }}
           onClick={(e) => onSelect([selKey('mute', lc)], e.shiftKey)} />
         <text x={cx} y={muteY + MUTE_H + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : ''}</text>
@@ -106,7 +116,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
     const fsel = selected.has(selKey('fader', lc))
     cells.push(
       <g key={`f${lc}`}>
-        <rect x={cx - 13} y={faderY} width={26} height={FADER_H} rx={5} fill={fv ? colorFor(fv.colId) : '#26262c'}
+        <rect x={cx - 13} y={faderY} width={26} height={FADER_H} rx={5} fill={fillFor('fader', lc, fv, '#26262c')}
           stroke={fsel ? '#fff' : '#54545e'} strokeWidth={fsel ? 3 : 1} style={{ cursor: 'pointer' }}
           onClick={(e) => onSelect([selKey('fader', lc)], e.shiftKey)} />
         <text x={cx} y={faderY + FADER_H + 12} textAnchor="middle" fontSize={8} fill="#c4c8d0">{fv ? trunc(fv.name) : ''}</text>

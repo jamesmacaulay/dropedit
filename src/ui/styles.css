@@ -41,6 +41,10 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .surface text.lbl:hover { fill: #e7e9ee; }
 .board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
 .left-col { display: flex; flex-direction: column; gap: 10px; }
+.snp-modes { display: flex; gap: 6px; }
+.snp-modes button { flex: 1; }
+.snp-modes button.active { background: var(--accent); color: #222; border-color: var(--accent); }
+.pad.armed { box-shadow: 0 0 0 2px var(--accent); cursor: copy; }
 .left-col .devices-btn { width: 100%; }
 .right-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 /* horizontal row of layer buttons above the surface, spanning the controls width (equal widths) */

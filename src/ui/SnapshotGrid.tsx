@@ -17,6 +17,9 @@ export interface SnapshotGridProps {
   selected: Set<string>
   onSelect: (keys: string[], additive: boolean) => void
   onPickBank: (bank: number) => void
+  /** when set (save/load mode), a pad click triggers this instead of selecting the pad */
+  onPad?: (id: string) => void
+  padHint?: 'save' | 'load' | null
 }
 
 export function snapshotId(bank: number, col: number, row: number) {
@@ -30,7 +33,7 @@ function bankHasSnapshots(doc: JsonDoc, bank: number): boolean {
   return false
 }
 
-export function SnapshotGrid({ doc, bank, selected, onSelect, onPickBank }: SnapshotGridProps) {
+export function SnapshotGrid({ doc, bank, selected, onSelect, onPickBank, onPad, padHint }: SnapshotGridProps) {
   const [bankMode, setBankMode] = useState(false)
 
   const rows: ReactNode[] = []
@@ -48,9 +51,9 @@ export function SnapshotGrid({ doc, bank, selected, onSelect, onPickBank }: Snap
         const snp = readControl(doc, 'snp', id)
         const key = selKey('snp', id)
         pads.push(
-          <button key={id} className={'pad' + (selected.has(key) ? ' sel' : '') + (snp ? '' : ' empty')}
+          <button key={id} className={'pad' + (selected.has(key) ? ' sel' : '') + (snp ? '' : ' empty') + (padHint ? ' armed' : '')}
             title={snp ? snp.name : `empty (${id})`} style={snp ? { background: colorFor(snp.colId) } : undefined}
-            onClick={(e) => onSelect([key], e.shiftKey)} />,
+            onClick={(e) => onPad ? onPad(id) : onSelect([key], e.shiftKey)} />,
         )
       }
     }
