@@ -21,6 +21,10 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('Clean Init') // init buttons present
     expect(html).toContain('DAW Init')
     expect(html).toContain('Layer 1') // workspace rendered (clean-init loaded), not the empty state
+    // CC-BY-SA-4.0 attribution for the bundled device DB must be visible in the app
+    expect(html).toContain('pencilresearch/midi')
+    expect(html).toContain('CC')
+    expect(html).toContain('creativecommons.org/licenses/by-sa/4.0')
   })
 
   it('Surface renders controls for a loaded project', () => {

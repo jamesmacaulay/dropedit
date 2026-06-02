@@ -68,4 +68,11 @@ Built as a static site and deployed to GitHub Pages from `.github/workflows/depl
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+The **software** is MIT — see [LICENSE](LICENSE).
+
+The bundled **MIDI device-preset database** in [`src/data/devices/`](src/data/devices/) is **not** MIT.
+It is vendored verbatim from [pencilresearch/midi](https://github.com/pencilresearch/midi) and licensed
+**[CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/)** — see
+[`src/data/devices/LICENSE`](src/data/devices/LICENSE) and [`SOURCE.md`](src/data/devices/SOURCE.md).
+If you redistribute that data you must preserve its attribution and license, and any adaptation of it
+must also be CC-BY-SA-4.0.

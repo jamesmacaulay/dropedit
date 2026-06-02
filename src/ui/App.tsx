@@ -325,6 +325,11 @@ export function App() {
       {doc && deviceEditorOpen && (
         <DeviceEditor text={text!} doc={doc} deviceFor={deviceFor} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onUploadCsv={onUploadCsv} onClose={() => setDeviceEditorOpen(false)} />
       )}
+
+      <footer className="appfoot">
+        Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
+        licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY-SA&nbsp;4.0</a>.
+      </footer>
     </div>
   )
 }

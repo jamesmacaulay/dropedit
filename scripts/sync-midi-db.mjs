@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 const PINNED_COMMIT = 'bc37661f9a108ec7a86d9fee2fd1262484f038e8'
 const REPO = 'pencilresearch/midi'
+const LICENSE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..')
@@ -58,15 +59,24 @@ try {
     bytes += statSync(dst).size
   }
 
+  // bundle the CC-BY-SA-4.0 legal text alongside the data (the dir is wiped above, so write it here)
+  execFileSync('curl', ['-fsSL', LICENSE_URL, '-o', join(destDir, 'LICENSE')])
+
   writeFileSync(join(destDir, 'SOURCE.md'),
     `# Bundled MIDI device-preset database\n\n` +
-    `Vendored verbatim from [${REPO}](https://github.com/${REPO}) — licensed **CC-BY-SA-4.0**.\n\n` +
+    `Vendored **verbatim** (unmodified) from [${REPO}](https://github.com/${REPO}), licensed\n` +
+    `**Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA-4.0)**.\n\n` +
+    `- Source: https://github.com/${REPO}\n` +
     `- Pinned commit: \`${PINNED_COMMIT}\`\n` +
-    `- Files: ${csvs.length} CSVs\n\n` +
-    `Refresh with \`node scripts/sync-midi-db.mjs\` after bumping \`PINNED_COMMIT\`.\n` +
-    `These files are unmodified; the CC-BY-SA-4.0 license and attribution to ${REPO} apply.\n`)
+    `- Files: ${csvs.length} CSVs\n` +
+    `- License text: [./LICENSE](./LICENSE) · deed: https://creativecommons.org/licenses/by-sa/4.0/\n\n` +
+    `## Attribution & reuse\n\n` +
+    `These CSVs are licensed CC-BY-SA-4.0 (NOT the project's MIT license). If you redistribute them\n` +
+    `you must keep this attribution and license, and any *adaptation* you distribute must also be\n` +
+    `CC-BY-SA-4.0. Refresh by bumping \`PINNED_COMMIT\` in \`scripts/sync-midi-db.mjs\` and re-running it;\n` +
+    `keep edits upstream so the snapshot stays verbatim (if you ever modify a file here, say so).\n`)
 
-  console.log(`Synced ${csvs.length} CSVs (${(bytes / 1024 / 1024).toFixed(2)} MB) -> src/data/devices/`)
+  console.log(`Synced ${csvs.length} CSVs (${(bytes / 1024 / 1024).toFixed(2)} MB) + LICENSE -> src/data/devices/`)
 } finally {
   rmSync(tmp, { recursive: true, force: true })
 }
