@@ -75,6 +75,8 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sidebar fieldset.slot legend .meta { margin: 0; }
 .sidebar fieldset.slot legend .chk { color: var(--txt); flex-direction: row; align-items: center; }
 .sidebar .slot-fields { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.sidebar .xy-pair { display: flex; gap: 6px; }
+.sidebar .xy-pair input { width: 50%; }
 .snp-actions { display: flex; gap: 8px; }
 .snp-actions button { flex: 1; }
 

@@ -1,9 +1,43 @@
 // Human labels for Drop enum fields. Observed values + a raw fallback for the rest.
 // (Not exhaustive — the Drop has more behaviors/curves; UI shows "raw N" when unknown.)
 
+// Message type (msgType), decoded from a hardware capture. `2 = Note On` is inferred from real
+// projects (it wasn't in the enum capture). Snapshot-only types (Program Change / Program+Bank)
+// aren't decoded yet — they show as "Custom" until captured.
 export const MSG_TYPE: Record<number, string> = {
-  0: 'Note off', 2: 'Note', 3: 'CC', 4: 'CC 14-bit', 6: 'NRPN',
-  7: 'Pitch bend', 8: 'Aftertouch', 9: 'Program change', 10: 'Program+Bank',
+  2: 'Note On', 3: 'CC', 5: 'Pitch bend', 6: 'Aftertouch',
+  7: 'CC14', 8: 'NRPN', 12: 'CC14 LSB first',
+}
+
+// A slot's Min/Max is stored as a 14-bit value (0-STORE_MAX) spanning the message type's display
+// range (verified by capture: CC 64 -> 8256, pitchbend -8192..8191 -> 0..16383). The display range
+// is per msgType, so the editor shows e.g. 0-127 for CC while the file holds 0-16383.
+export const STORE_MAX = 16383
+const MSG_RANGE: Record<number, { min: number; max: number }> = {
+  2: { min: 0, max: 127 }, 3: { min: 0, max: 127 }, 6: { min: 0, max: 127 }, // Note On / CC / Aftertouch
+  5: { min: -8192, max: 8191 },                                              // Pitch bend
+  7: { min: 0, max: 16383 }, 8: { min: 0, max: 16383 }, 12: { min: 0, max: 16383 }, // CC14 / NRPN / CC14 LSB
+}
+export function slotRange(msgType: number): { min: number; max: number } {
+  return MSG_RANGE[msgType] ?? { min: 0, max: 127 } // sensible default for unknown types
+}
+export function storedToDisplay(stored: number, msgType: number): number {
+  const { min, max } = slotRange(msgType)
+  return Math.round(min + (stored / STORE_MAX) * (max - min))
+}
+export function displayToStored(display: number, msgType: number): number {
+  const { min, max } = slotRange(msgType)
+  return max === min ? 0 : Math.round(((display - min) / (max - min)) * STORE_MAX)
+}
+
+// The Flex curve (curveId 33) packs its two points into maxOut (XY1) and minOut (XY2),
+// each as (x << 7) | y with x,y in 0-127 (verified: (10,20)->1300, (90,100)->11620).
+export const FLEX_CURVE_ID = 33
+export function unpackXY(packed: number): { x: number; y: number } {
+  return { x: (packed >> 7) & 0x7f, y: packed & 0x7f }
+}
+export function packXY(x: number, y: number): number {
+  return ((x & 0x7f) << 7) | (y & 0x7f)
 }
 
 // Behavior — a single global enum across control types (decoded from a hardware capture).

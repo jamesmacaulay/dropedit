@@ -7,7 +7,10 @@ import {
 import type { ControlType } from '../model/controlId'
 import type { PresetDevice } from '../model/presetDb'
 import { paramLabel } from '../model/presetDb'
-import { MSG_TYPE, BEHAV, FEEDB, CURVE } from '../model/enums'
+import {
+  MSG_TYPE, BEHAV, FEEDB, CURVE,
+  slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
+} from '../model/enums'
 import { EnumField } from './EnumField'
 import { COLOR_NAMES } from './palette'
 import {
@@ -224,6 +227,28 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       </select>
     </label>
   }
+  const idKey = entries.map((e) => e.id + ':' + e.slot.key).join(',')
+  const isFlex = sh('curveId') === FLEX_CURVE_ID
+  // Min/Max are stored as 14-bit; show them scaled to the message type's display range.
+  const rangeNum = (labelTxt: string, field: 'minOut' | 'maxOut') => {
+    const v = sh(field)
+    const r = msgType === MULTI ? null : slotRange(msgType as number)
+    const disp = v === MULTI ? '' : (r ? storedToDisplay(v as number, msgType as number) : (v as number))
+    return <label>{labelTxt}<input type="number" min={r?.min} max={r?.max} value={v === MULTI ? '' : disp} placeholder={v === MULTI ? '[multiple]' : ''}
+      onChange={(e) => e.target.value !== '' && set(field, r ? displayToStored(Number(e.target.value), msgType as number) : Number(e.target.value), true)} /></label>
+  }
+  // Flex curve packs its two points into maxOut (XY1) / minOut (XY2) as (x<<7)|y, x,y in 0-127.
+  const xyPoint = (labelTxt: string, field: 'minOut' | 'maxOut') => {
+    const v = sh(field)
+    const multi = v === MULTI
+    const xy = multi ? { x: 0, y: 0 } : unpackXY(v as number)
+    return <label>{labelTxt}
+      <span className="xy-pair">
+        <input type="number" min={0} max={127} placeholder="x" value={multi ? '' : xy.x} onChange={(e) => e.target.value !== '' && set(field, packXY(Number(e.target.value), xy.y), true)} />
+        <input type="number" min={0} max={127} placeholder="y" value={multi ? '' : xy.y} onChange={(e) => e.target.value !== '' && set(field, packXY(xy.x, Number(e.target.value)), true)} />
+      </span>
+    </label>
+  }
 
   return (
     <div className="slot-fields">
@@ -234,12 +259,15 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
         </select>
       </label>
       {sel('Target device', 'target', devices.map((d) => <option key={d.index} value={d.index}>{d.index}: {d.name || '—'}</option>))}
-      {sel('Type', 'msgType', Object.entries(MSG_TYPE).map(([n, l]) => <option key={n} value={n}>{l}</option>))}
+      <EnumField key={`type-${idKey}`} label="Type" map={MSG_TYPE}
+        value={msgType === MULTI ? undefined : (msgType as number)} multi={msgType === MULTI}
+        onSet={(v) => set('msgType', v)} />
       {num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
       {num('Channel', 'ch', { min: 1, max: 16 })}
-      {num('Min out', 'minOut')}
-      {num('Max out', 'maxOut')}
-      <EnumField key={`curve-${entries.map((e) => e.id + ':' + e.slot.key).join(',')}`} label="Curve" map={CURVE}
+      {isFlex
+        ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
+        : (<>{rangeNum('Min out', 'minOut')}{rangeNum('Max out', 'maxOut')}</>)}
+      <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
         value={sh('curveId') === MULTI ? undefined : (sh('curveId') as number)} multi={sh('curveId') === MULTI}
         onSet={(v) => set('curveId', v, true)} />
       {num('csvRef', 'csvRef')}

@@ -121,12 +121,48 @@ const SECTIONS = [
     intro: 'One curve per rotary (set the rotary’s first output slot’s Curve), row-major:\n    35 curve types fill Layers 4 (all 32) then the first 3 of Layer 5.',
     rows: curveRows(CURVE_TYPES),
   },
+  {
+    field: 'msgType',
+    title: 'Message type (msgType) — on LAYER 6 row 3 (+ a mute)',
+    intro: 'Set each control’s FIRST output slot Type. Note On is button/snapshot only (so it’s a mute);\n' +
+      '    Program Change / Program+Bank are snapshot-only — capture those separately if you want them.',
+    rows: [
+      { map: 'rotary', id: '502', slot: '0', name: 'CC',             how: 'Layer 6, ROT col 1 row 3, slot 1: Type=CC' },
+      { map: 'rotary', id: '512', slot: '0', name: 'CC14',           how: 'Layer 6, ROT col 2 row 3, slot 1: Type=CC14 (MSB first)' },
+      { map: 'rotary', id: '522', slot: '0', name: 'CC14 LSB first', how: 'Layer 6, ROT col 3 row 3, slot 1: Type=CC14 LSB first' },
+      { map: 'rotary', id: '532', slot: '0', name: 'NRPN',           how: 'Layer 6, ROT col 4 row 3, slot 1: Type=NRPN' },
+      { map: 'rotary', id: '542', slot: '0', name: 'Pitch bend',     how: 'Layer 6, ROT col 5 row 3, slot 1: Type=Pitch bend' },
+      { map: 'rotary', id: '552', slot: '0', name: 'Aftertouch',     how: 'Layer 6, ROT col 6 row 3, slot 1: Type=Aftertouch' },
+      { map: 'mute',   id: '50',  slot: '0', name: 'Note On',        how: 'Layer 6, MUTE col 1, slot 1: Type=Note On' },
+    ],
+  },
+  {
+    raw: true, // dump the whole slot object rather than build a code->name map
+    title: 'Min/Max + Flex XY encoding — on LAYER 6  [raw inspection]',
+    intro: 'One rotary per test; set its FIRST output slot exactly as listed. We read the stored\n' +
+      '    minOut/maxOut (and the Flex slot) to learn how displayed values are encoded.',
+    rows: [
+      { map: 'rotary', id: '500', slot: '0', label: 'CC  Min 0  Max 127',     how: 'Layer 6, ROT col 1 row 1, slot 1: Type=CC,        Min=0,     Max=127' },
+      { map: 'rotary', id: '510', slot: '0', label: 'CC  Min 0  Max 64',      how: 'Layer 6, ROT col 2 row 1, slot 1: Type=CC,        Min=0,     Max=64' },
+      { map: 'rotary', id: '520', slot: '0', label: 'CC  Min 0  Max 1',       how: 'Layer 6, ROT col 3 row 1, slot 1: Type=CC,        Min=0,     Max=1' },
+      { map: 'rotary', id: '530', slot: '0', label: 'CC  Min 64 Max 127',     how: 'Layer 6, ROT col 4 row 1, slot 1: Type=CC,        Min=64,    Max=127' },
+      { map: 'rotary', id: '540', slot: '0', label: 'CC14 Min 0 Max 16383',   how: 'Layer 6, ROT col 5 row 1, slot 1: Type=CC14, Min=0,     Max=16383' },
+      { map: 'rotary', id: '550', slot: '0', label: 'CC14 Min 0 Max 8191',    how: 'Layer 6, ROT col 6 row 1, slot 1: Type=CC14, Min=0,     Max=8191' },
+      { map: 'rotary', id: '560', slot: '0', label: 'NRPN Min 0 Max 16383',   how: 'Layer 6, ROT col 7 row 1, slot 1: Type=NRPN,      Min=0,     Max=16383' },
+      { map: 'rotary', id: '570', slot: '0', label: 'Pitchbend Min -8192 Max 8191', how: 'Layer 6, ROT col 8 row 1, slot 1: Type=Pitch bend, Min=-8192, Max=8191' },
+      { map: 'rotary', id: '501', slot: '0', label: 'Flex XY1(10,20) XY2(90,100)',  how: 'Layer 6, ROT col 1 row 2, slot 1: Type=CC, Curve=Flex, XY1 x=10 y=20, XY2 x=90 y=100' },
+    ],
+  },
 ]
 
-function read(proj, r, field) {
-  if (r.device != null) return proj?.device?.[String(r.device)]?.[field]
+function readNode(proj, r) {
+  if (r.device != null) return proj?.device?.[String(r.device)]
   let node = proj?.map?.[r.map]?.[r.id]
   if (r.slot != null) node = node?.[r.slot]
+  return node
+}
+function read(proj, r, field) {
+  const node = readNode(proj, r)
   return node?.[field]
 }
 
@@ -145,6 +181,15 @@ function printInstructions() {
 function decode(files) {
   const projs = files.map((f) => JSON.parse(readFileSync(f, 'utf8')))
   for (const s of SECTIONS) {
+    if (s.raw) { // inspection section: dump the captured objects, don't build a code->name map
+      console.log(`\n=== ${s.title.split('  [')[0]} (raw) ===`)
+      for (const r of s.rows) {
+        let node
+        for (const p of projs) { const n = readNode(p, r); if (n != null) { node = n; break } }
+        console.log(`  ${r.label.padEnd(30)} ${node ? JSON.stringify(node) : '(not found)'}`)
+      }
+      continue
+    }
     const map = new Map() // code -> name
     const conflicts = []
     const missing = []
