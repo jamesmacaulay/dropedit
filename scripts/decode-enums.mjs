@@ -153,6 +153,18 @@ const SECTIONS = [
       { map: 'rotary', id: '501', slot: '0', label: 'Flex XY1(10,20) XY2(90,100)',  how: 'Layer 6, ROT col 1 row 2, slot 1: Type=CC, Curve=Flex, XY1 x=10 y=20, XY2 x=90 y=100' },
     ],
   },
+  {
+    raw: true,
+    title: 'Snapshot output message types — bank 1  [raw inspection / structure discovery]',
+    intro: 'Program Change / Program+Bank are snapshot-only. Save a snapshot on each pad, then map its\n' +
+      '    OUTPUT Type as listed (use the distinctive number so it’s easy to spot). We dump the snp\n' +
+      '    entry to find WHERE the message type/number live (scene "data" is omitted).',
+    rows: [
+      { map: 'snp', id: '0000', label: 'Note On (Note# 61)',      how: 'Bank 1, pad col 1 row 1: save snapshot → Mapping: Type=Note On,        Note#=61' },
+      { map: 'snp', id: '0001', label: 'Program Change (Prog 77)', how: 'Bank 1, pad col 1 row 2: save snapshot → Mapping: Type=Program Change, Program=77' },
+      { map: 'snp', id: '0002', label: 'Program+Bank (Prog 88)',   how: 'Bank 1, pad col 1 row 3: save snapshot → Mapping: Type=Program+Bank,   Program=88' },
+    ],
+  },
 ]
 
 function readNode(proj, r) {
@@ -183,10 +195,11 @@ function decode(files) {
   for (const s of SECTIONS) {
     if (s.raw) { // inspection section: dump the captured objects, don't build a code->name map
       console.log(`\n=== ${s.title.split('  [')[0]} (raw) ===`)
+      const show = (n) => JSON.stringify(n && typeof n === 'object' && 'data' in n ? { ...n, data: '…(scene omitted)' } : n)
       for (const r of s.rows) {
         let node
         for (const p of projs) { const n = readNode(p, r); if (n != null) { node = n; break } }
-        console.log(`  ${r.label.padEnd(30)} ${node ? JSON.stringify(node) : '(not found)'}`)
+        console.log(`  ${r.label.padEnd(26)} ${node ? show(node) : '(not found)'}`)
       }
       continue
     }

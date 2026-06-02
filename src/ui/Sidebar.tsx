@@ -266,7 +266,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       {num('Channel', 'ch', { min: 1, max: 16 })}
       {isFlex
         ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
-        : (<>{rangeNum('Min out', 'minOut')}{rangeNum('Max out', 'maxOut')}</>)}
+        : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>)}
       <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
         value={sh('curveId') === MULTI ? undefined : (sh('curveId') as number)} multi={sh('curveId') === MULTI}
         onSet={(v) => set('curveId', v, true)} />
