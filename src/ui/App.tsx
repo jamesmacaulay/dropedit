@@ -54,7 +54,7 @@ export function App() {
   const [clipboard, setClipboard] = useState<{ kind: 'control' | 'snapshot'; items: CopiedControl[] } | null>(null)
   // snapshot save/load flow: 'save' shows the draft settings + group tint; 'load' recalls on pad click
   const [snapMode, setSnapMode] = useState<null | 'save' | 'load'>(null)
-  const [snapDraft, setSnapDraft] = useState<{ name: string; colId: number; group: number }>({ name: '', colId: 4, group: 0 })
+  const [snapDraft, setSnapDraft] = useState<{ name: string; colId: number; group: number }>({ name: '', colId: 4 /* cyan */, group: 0 })
   const [deviceEditorOpen, setDeviceEditorOpen] = useState(false)
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
