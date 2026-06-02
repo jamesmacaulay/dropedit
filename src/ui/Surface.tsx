@@ -99,7 +99,7 @@ export function Surface({ doc, layer, selected, onSelect }: SurfaceProps) {
         <rect x={cx - 17} y={muteY} width={34} height={MUTE_H} rx={6} fill={mv ? colorFor(mv.colId) : '#26262c'}
           stroke={msel ? '#fff' : '#54545e'} strokeWidth={msel ? 3 : 1} style={{ cursor: 'pointer' }}
           onClick={(e) => onSelect([selKey('mute', lc)], e.shiftKey)} />
-        <text x={cx} y={muteY + 15} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : ''}</text>
+        <text x={cx} y={muteY + MUTE_H + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : ''}</text>
       </g>,
     )
     const fv = readControl(doc, 'fader', lc)
