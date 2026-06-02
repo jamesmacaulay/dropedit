@@ -38,6 +38,10 @@ function persistProject(text: string, name?: string) {
     if (name != null) localStorage.setItem(STORAGE_FILE, name)
   } catch { /* quota / disabled storage — keep working in-memory */ }
 }
+function persistFileName(name: string) {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.setItem(STORAGE_FILE, name) } catch { /* ignore */ }
+}
 
 export function App() {
   // First load restores the saved project; with nothing saved, start from the clean-init blank slate.
@@ -147,7 +151,7 @@ export function App() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = fileName.replace(/\.json$/i, '') + '.json'
+    a.download = (fileName.replace(/\.json$/i, '').trim() || 'project') + '.json'
     document.body.appendChild(a); a.click(); a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
@@ -282,7 +286,9 @@ export function App() {
         <button onClick={() => loadInit(CLEAN_INIT, 'clean-init.json')}>Clean Init</button>
         <button onClick={() => loadInit(DAW_INIT, 'daw-init.json')}>DAW Init</button>
         <button onClick={save} disabled={!text}>Download</button>
-        <span className="muted">{text ? fileName : 'no project loaded'}</span>
+        <input className="filename" value={fileName} aria-label="Project file name (used when downloading)"
+          title="File name used when you download the project" spellCheck={false}
+          onChange={(e) => { setFileName(e.target.value); persistFileName(e.target.value) }} />
         <span className="grow" />
         <a className="gh-link" href="https://github.com/jamesmacaulay/dropedit" target="_blank" rel="noopener noreferrer" title="View source on GitHub" aria-label="View source on GitHub">
           <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">

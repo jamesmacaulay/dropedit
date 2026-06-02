@@ -31,6 +31,9 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(header).not.toContain('Undo')
     expect(html).toContain('Undo') // still rendered (now under the control layout)
     expect(html).toContain('Redo')
+    // editable file name input, bound to the current name (drives the download filename)
+    expect(header).toContain('class="filename"')
+    expect(header).toContain('value="clean-init.json"')
   })
 
   it('Surface renders controls for a loaded project', () => {
