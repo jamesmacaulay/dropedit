@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { storedToDisplay, displayToStored, unpackXY, packXY, STORE_MAX } from '../src/model/enums'
+import { storedToDisplay, displayToStored, unpackXY, packXY, unpackBank, packBank, STORE_MAX } from '../src/model/enums'
 
 // Slot Min/Max are stored as a 14-bit value over the message type's display range
 // (verified by hardware capture). msgType codes: 3=CC (0-127), 7=CC14 (0-16383), 5=Pitch bend (±8192).
@@ -34,5 +34,13 @@ describe('Flex curve XY packing', () => {
     expect(packXY(90, 100)).toBe(11620) // captured XY2 (90,100)
     expect(unpackXY(1300)).toEqual({ x: 10, y: 20 })
     expect(unpackXY(11620)).toEqual({ x: 90, y: 100 })
+  })
+})
+
+describe('Program+Bank msgNr float packing', () => {
+  it('packs/unpacks MSB.LSB, matching the capture', () => {
+    expect(unpackBank(5.009)).toEqual({ msb: 5, lsb: 9 }) // captured bank fields 5 then 9
+    expect(packBank(5, 9)).toBe(5.009)
+    expect(unpackBank(packBank(12, 90))).toEqual({ msb: 12, lsb: 90 }) // round-trips, incl. trailing zero
   })
 })

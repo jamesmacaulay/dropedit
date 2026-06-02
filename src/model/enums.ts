@@ -39,6 +39,17 @@ export function packXY(x: number, y: number): number {
   return ((x & 0x7f) << 7) | (y & 0x7f)
 }
 
+// Program+Bank (msgType 10) packs its two bank values into msgNr as a float: the integer part is
+// the first bank value and the fractional part (×1000) is the second (verified: 5.009 = 5, 9).
+export const PROGRAM_TYPES = new Set([9, 10]) // Program Change, Program+Bank — value (maxOut) = program #
+export function unpackBank(packed: number): { msb: number; lsb: number } {
+  const msb = Math.floor(packed)
+  return { msb, lsb: Math.round((packed - msb) * 1000) }
+}
+export function packBank(msb: number, lsb: number): number {
+  return Number((msb + lsb / 1000).toFixed(3))
+}
+
 // Behavior — a single global enum across control types (decoded from a hardware capture).
 export const BEHAV: Record<number, string> = {
   0: 'Precision', 1: 'Dynamic Pot', 2: 'Dynamic Fast',

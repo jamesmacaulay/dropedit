@@ -10,6 +10,7 @@ import { paramLabel } from '../model/presetDb'
 import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
+  PROGRAM_TYPES, unpackBank, packBank,
 } from '../model/enums'
 import { EnumField } from './EnumField'
 import { COLOR_NAMES } from './palette'
@@ -229,6 +230,10 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   }
   const idKey = entries.map((e) => e.id + ':' + e.slot.key).join(',')
   const isFlex = sh('curveId') === FLEX_CURVE_ID
+  // Program Change / Program+Bank: the program # IS the value (maxOut, 0-127); Program+Bank also
+  // packs its two bank values into msgNr as a float. So those types get a bespoke layout.
+  const isProgram = msgType !== MULTI && PROGRAM_TYPES.has(msgType as number)
+  const isProgBank = msgType === 10
   // Min/Max are stored as 14-bit; show them scaled to the message type's display range.
   const rangeNum = (labelTxt: string, field: 'minOut' | 'maxOut') => {
     const v = sh(field)
@@ -249,6 +254,18 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       </span>
     </label>
   }
+  // Program+Bank stores its two bank values packed into msgNr as MSB.LSB float.
+  const bankFields = () => {
+    const v = sh('msgNr')
+    const multi = v === MULTI
+    const { msb, lsb } = multi ? { msb: 0, lsb: 0 } : unpackBank(v as number)
+    return <label>Bank (MSB · LSB)
+      <span className="xy-pair">
+        <input type="number" min={0} max={127} placeholder="MSB" value={multi ? '' : msb} onChange={(e) => e.target.value !== '' && set('msgNr', packBank(Number(e.target.value), lsb), true)} />
+        <input type="number" min={0} max={127} placeholder="LSB" value={multi ? '' : lsb} onChange={(e) => e.target.value !== '' && set('msgNr', packBank(msb, Number(e.target.value)), true)} />
+      </span>
+    </label>
+  }
 
   return (
     <div className="slot-fields">
@@ -262,11 +279,15 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       <EnumField key={`type-${idKey}`} label="Type" map={MSG_TYPE}
         value={msgType === MULTI ? undefined : (msgType as number)} multi={msgType === MULTI}
         onSet={(v) => set('msgType', v)} />
-      {num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
+      {/* msgNr is the note/CC number for normal types; for program types it's hidden (Program+Bank's
+          two bank values live there, edited via the Bank fields below). */}
+      {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
       {num('Channel', 'ch', { min: 1, max: 16 })}
-      {isFlex
-        ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
-        : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>)}
+      {isProgram
+        ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
+        : isFlex
+          ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
+          : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>)}
       <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
         value={sh('curveId') === MULTI ? undefined : (sh('curveId') as number)} multi={sh('curveId') === MULTI}
         onSet={(v) => set('curveId', v, true)} />
