@@ -74,6 +74,13 @@ export function App() {
   const [text, setText] = useState<string | null>(() => readValidStored()?.text ?? CLEAN_INIT)
   const [fileName, setFileName] = useState(() => readValidStored()?.name ?? 'clean-init.json')
   const [loadError, setLoadError] = useState<string | null>(null) // shown when an imported file won't parse
+  // true if THIS tab seeded its project from the shared localStorage copy (i.e. it's a new tab, not a
+  // reload of an existing one). Combined with "another tab is open" (via BroadcastChannel) it means a fork.
+  const [seededFromLocal] = useState(() => {
+    try { if (sessionStorage.getItem(STORAGE_KEY) != null) return false } catch { return false }
+    try { const l = localStorage.getItem(STORAGE_KEY); return l != null && looksLikeDropProject(l) } catch { return false }
+  })
+  const [forkWarning, setForkWarning] = useState(false) // a copy of a project still open in another tab
   // first-run notice (unofficial tool / keep backups / how to start); dismissed flag persists
   const [welcomed, setWelcomed] = useState(() => { try { return localStorage.getItem('dropedit:welcomed') === '1' } catch { return true } })
   const [layer, setLayer] = useState(0)
@@ -393,6 +400,26 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Cross-tab presence (BroadcastChannel): every tab answers "ping" with "pong". If this tab seeded
+  // from the shared copy AND another tab answers, it's a fork of a project still open elsewhere — warn.
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return
+    let chan: BroadcastChannel
+    try { chan = new BroadcastChannel('dropedit-tabs') } catch { return }
+    let found = false
+    chan.onmessage = (e) => {
+      if (e.data === 'ping') chan.postMessage('pong')   // announce our presence to a new tab
+      else if (e.data === 'pong') found = true           // a reply to our own ping
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (seededFromLocal) {
+      chan.postMessage('ping')
+      timer = setTimeout(() => { if (found) setForkWarning(true) }, 300)
+    }
+    return () => { if (timer) clearTimeout(timer); chan.close() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // persist any pending typed text if the tab is closed mid-burst
   useEffect(() => {
     const flush = () => flushPending()
@@ -561,6 +588,18 @@ export function App() {
             <div className="confirm-actions">
               <button onClick={() => setPendingLoad(null)}>Cancel</button>
               <button className="danger" onClick={() => { const r = pendingLoad.run; setPendingLoad(null); r() }}>Discard &amp; load</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {forkWarning && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setForkWarning(false) }}>
+          <div className="modal confirm">
+            <div className="modal-head"><h2>Opened in another tab</h2></div>
+            <p className="hint">This project was forked from another dropedit tab that’s still open. Changes made in one tab won’t be reflected in the other. Use <strong>Clean Init</strong> or <strong>DAW Init</strong> to start fresh.</p>
+            <div className="confirm-actions">
+              <button onClick={() => setForkWarning(false)}>Got it</button>
             </div>
           </div>
         </div>
