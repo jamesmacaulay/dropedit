@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { getPath, type JsonDoc } from '../model/jsonDoc'
+import { type JsonDoc } from '../model/jsonDoc'
 import {
-  readControl, readStateValue, readDevices, readGroupMember, NUM_SEL_GROUPS,
+  readControl, readStateValue, readDevices, readGroupMember, readSnapshotMember, readSnapshotValue, NUM_SEL_GROUPS,
   type ControlView, type SlotView, type DeviceView,
 } from '../model/dropProject'
 import type { ControlType } from '../model/controlId'
@@ -16,7 +16,7 @@ import { EnumField } from './EnumField'
 import { COLOR_NAMES } from './palette'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
-  addSlot, createControl, setSlotParam, setGroupMember,
+  addSlot, createControl, setSlotParam, setGroupMember, setSnapshotValue, setSnapshotMembers,
 } from '../model/edits'
 
 export interface SidebarProps {
@@ -63,27 +63,72 @@ function paramOptions(device: PresetDevice): ReactNode {
   ))
 }
 
-// ---------------- snapshot ----------------
-function SnapshotEditor({ text, doc, id, defaultColId, onChange }: SidebarProps & { id: string }) {
+// ---------------- snapshot (read-only context; name/colour live below the grid) ----------------
+function SnapshotEditor({ doc, id }: SidebarProps & { id: string }) {
   const view = readControl(doc, 'snp', id)
-  const exists = !!view
-  const hasData = !!getPath(doc.root, ['map', 'snp', id, 'data'])
   return (
     <aside className="sidebar">
       <h2>{`Snapshot ${id}`}</h2>
-      {!exists && <p className="hint">Empty pad — “Save” captures the current control values into a new snapshot here.</p>}
-      {exists && (
-        <>
-          <label>Name<input type="text" value={view!.name} onChange={(e) => onChange(setControlField(text, 'snp', id, 'name', e.target.value), true)} /></label>
-          <label>Pad color
-            <select value={String(view!.colId)} onChange={(e) => onChange(setControlField(text, 'snp', id, 'colId', Number(e.target.value)))}>
-              {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
-            </select>
-          </label>
-          <p className="meta">{hasData ? 'Stores values for its selected controls.' : 'No stored values yet.'}</p>
-        </>
-      )}
-      <p className="meta">Use <strong>Save</strong> / <strong>Jump/Load</strong> below the grid to capture or recall snapshots.</p>
+      {!view
+        ? <p className="hint">Empty pad — <strong>Save</strong> captures the current control values into a new snapshot here.</p>
+        : <p className="hint">Edit its name &amp; colour below the grid. Use <strong>Edit</strong> to change the values it stores, or <strong>Jump/Load</strong> to recall it.</p>}
+    </aside>
+  )
+}
+
+// ---------------- snapshot edit mode ----------------
+// Sidebar while editing snapshot `editSnap`. Auto-adapts: with no control selected it shows the
+// snapshot (its slots — coming in a follow-up); with controls selected it edits their stored values.
+export function SnapshotEditPanel({ text, doc, editSnap, selection, onChange }: {
+  text: string; doc: JsonDoc; editSnap: string | null; selection: string[]; onChange: (t: string, coalesce?: boolean) => void
+}) {
+  if (!editSnap) {
+    return <aside className="sidebar"><h2>Edit snapshot</h2>
+      <p className="hint">Click a filled snapshot pad to edit it. On the surface, green = stored in the snapshot, red = not.</p></aside>
+  }
+  const hasControls = selection.some((k) => !k.startsWith('snp:'))
+  if (hasControls) return <SnapshotControlEditor text={text} doc={doc} snpId={editSnap} selection={selection} onChange={onChange} />
+  return (
+    <aside className="sidebar">
+      <h2>{`Snapshot ${editSnap}`}</h2>
+      <p className="hint">Select controls on the surface to edit the values this snapshot stores. Use <strong>Select/Deselect/Toggle</strong> (S/D/T) below the faders to change which controls it stores.</p>
+      <p className="meta">Its one-shot MIDI output slots will be editable here in an upcoming update.</p>
+    </aside>
+  )
+}
+
+// Edit the stored value (and membership) of the selected control(s) within one snapshot.
+function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
+  text: string; doc: JsonDoc; snpId: string; selection: string[]; onChange: (t: string, coalesce?: boolean) => void
+}) {
+  const targets = selection.map(parseKey).filter((t) => t.type !== 'snp')
+    .map((t) => ({ type: t.type, id: t.id, member: readSnapshotMember(doc, snpId, t.type, t.id), value: readSnapshotValue(doc, snpId, t.type, t.id) }))
+  if (!targets.length) return <aside className="sidebar"><p className="hint">Nothing editable selected.</p></aside>
+  const single = targets.length === 1 ? targets[0] : null
+  const fieldTargets = targets.map((t) => ({ type: t.type, id: t.id }))
+  const members = targets.filter((t) => t.member)
+  const allMember = targets.every((t) => t.member)
+  const someMember = members.length > 0
+  const vals = members.map((m) => m.value)
+  const valueShared = !vals.length ? undefined : vals.every((v) => v === vals[0]) ? vals[0] : MULTI
+
+  const toggleMembership = () => onChange(setSnapshotMembers(text, snpId, fieldTargets, !allMember))
+  const onValue = (v: number) => { let t = text; for (const m of members) t = setSnapshotValue(t, snpId, m.type, m.id, v); onChange(t, true) }
+
+  return (
+    <aside className="sidebar">
+      <h2>{single ? `${single.type} ${single.id}` : `${targets.length} controls`}</h2>
+      <p className="meta">Editing what snapshot {snpId} stores.</p>
+      <TriCheckbox label="Stored in this snapshot" checked={allMember} indeterminate={someMember && !allMember} onToggle={toggleMembership} />
+      {!someMember
+        ? <p className="hint">Not stored. Check the box (or press <strong>S</strong>) to add — it captures the control’s current live value.</p>
+        : (<>
+            {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
+            <label>Stored value (0–1)<input type="number" step={0.001} min={0} max={1}
+              value={valueShared === MULTI || valueShared === undefined ? '' : (valueShared as number)}
+              placeholder={valueShared === MULTI ? '[multiple]' : ''}
+              onChange={(e) => e.target.value !== '' && onValue(Number(e.target.value))} /></label>
+          </>)}
     </aside>
   )
 }

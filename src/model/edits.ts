@@ -12,7 +12,7 @@ import {
   type ControlType,
 } from './controlId'
 import { makeCsvRef, type PresetParam } from './presetDb'
-import { selGroupLocation, readGroupMember } from './dropProject'
+import { selGroupLocation, readGroupMember, readStateValue, readSnapshotMember } from './dropProject'
 import { CONTROL_DEFAULTS } from './enums'
 
 const SECTION_TYPES: ControlType[] = ['rotary', 'rotbut', 'fader', 'mute']
@@ -342,6 +342,70 @@ export function loadSnapshot(text: string, id: string): string {
   for (const type of SECTION_TYPES) {
     const vals = (data[type] ?? {}) as Record<string, number>
     for (const ctrlId of Object.keys(vals)) cur = setStateValue(cur, type, ctrlId, vals[ctrlId])
+  }
+  return cur
+}
+
+// ---- editing an existing snapshot's stored scene -------------------------
+// Set (or, with value=null, remove) one control's stored value inside snapshot `snpId`'s
+// `data.<type>.<id>`, creating the data/type sub-objects as needed. Only the touched region is
+// rewritten; the snapshot must already exist (you create one via saveSnapshot).
+function snapDataEdit(text: string, snpId: string, type: ControlType, id: string, value: number | null): string {
+  const doc = parseJson(text)
+  const entry = getObject(doc.root, ['map', 'snp', snpId])
+  if (!entry) return text
+  const cur = scalarAt(doc, ['map', 'snp', snpId, 'data', type, id])
+  if (cur) {
+    if (value == null) {
+      const typeObj = getObject(doc.root, ['map', 'snp', snpId, 'data', type])!
+      const e = editRemoveMember(text, typeObj, id)
+      return e ? applyEdits(text, [e]) : text
+    }
+    return applyEdits(text, [editSetScalar(cur, formatValue(value, cur.raw))])
+  }
+  if (value == null) return text // not stored — nothing to remove
+  const typeObj = getObject(doc.root, ['map', 'snp', snpId, 'data', type])
+  if (typeObj) return applyEdits(text, [editInsertMember(text, typeObj, id, formatValue(value))])
+  const dataObj = getObject(doc.root, ['map', 'snp', snpId, 'data'])
+  if (dataObj) {
+    const sceneText = prettyScene({ [id]: value }, memberKeyTabs(text, dataObj))
+    return applyEdits(text, [editInsertMember(text, dataObj, type, sceneText)])
+  }
+  const sceneText = prettyScene({ [type]: { [id]: value } }, memberKeyTabs(text, entry))
+  return applyEdits(text, [editInsertMember(text, entry, 'data', sceneText)])
+}
+
+/** Set the value a snapshot stores for a control (creating the entry if the control is a member-to-be). */
+export function setSnapshotValue(text: string, snpId: string, type: ControlType, id: string, value: number): string {
+  return snapDataEdit(text, snpId, type, id, value)
+}
+
+/** Add controls to (or remove from) a snapshot's stored scene. Adding captures each control's
+ *  current live `state` value (0 if it has none); removing drops it from `data`. */
+export function setSnapshotMembers(text: string, snpId: string, targets: FieldTarget[], included: boolean): string {
+  let cur = text
+  for (const t of targets) {
+    if (included) {
+      const v = readStateValue(parseJson(cur), t.type, t.id) ?? 0
+      cur = snapDataEdit(cur, snpId, t.type, t.id, v)
+    } else {
+      cur = snapDataEdit(cur, snpId, t.type, t.id, null)
+    }
+  }
+  return cur
+}
+
+/** Flip each target's membership in a snapshot's stored scene (stored<->not). Newly added
+ *  controls capture their current live value. */
+export function toggleSnapshotMembers(text: string, snpId: string, targets: FieldTarget[]): string {
+  let cur = text
+  for (const t of targets) {
+    const doc = parseJson(cur)
+    if (readSnapshotMember(doc, snpId, t.type, t.id)) {
+      cur = snapDataEdit(cur, snpId, t.type, t.id, null)
+    } else {
+      cur = snapDataEdit(cur, snpId, t.type, t.id, readStateValue(doc, t.type, t.id) ?? 0)
+    }
   }
   return cur
 }

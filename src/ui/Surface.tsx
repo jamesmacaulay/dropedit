@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import type { JsonDoc } from '../model/jsonDoc'
-import { readControl, readGroupMember } from '../model/dropProject'
+import { readControl, readGroupMember, readSnapshotMember } from '../model/dropProject'
 import { COLS, ROWS, type ControlType } from '../model/controlId'
 import { colorFor } from './palette'
 
 export const selKey = (type: string, id: string) => `${type}:${id}`
 
-// snapshot save mode: controls tint by membership in the active selection group
+// snapshot save / edit modes: controls tint green (included) / red (not)
 const SAVE_GREEN = '#22c55e', SAVE_RED = '#ef4444'
 
 export interface SurfaceProps {
@@ -14,8 +14,10 @@ export interface SurfaceProps {
   layer: number
   selected: Set<string>
   onSelect: (keys: string[], additive: boolean) => void
-  /** when set, tint each control green (in this selection group) / red (not) — snapshot save mode */
+  /** save mode: tint each control green (in this selection group) / red (not) */
   saveGroup?: number | null
+  /** snapshot edit mode: tint each control green (stored in this snapshot) / red (not) */
+  editSnap?: string | null
 }
 
 const PAD = 16, LEFT = 46, COLW = 104, ROT_R = 19, ROT_GAP = 56, TOP = 48, MUTE_H = 24, FADER_H = 120
@@ -25,12 +27,20 @@ function trunc(s: string): string {
   return s.length > 12 ? s.slice(0, 11) + '…' : s
 }
 
-export function Surface({ doc, layer, selected, onSelect, saveGroup }: SurfaceProps) {
-  // in save mode, a control's fill shows group membership (green/red); else its colour or empty grey
+export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap }: SurfaceProps) {
+  // membership tint: in save mode by selection group, in snapshot edit mode by stored scene; null = off
+  const memberOf = (type: ControlType, id: string): boolean | null => {
+    if (saveGroup != null) return readGroupMember(doc, saveGroup, type, id)
+    if (editSnap != null) return readSnapshotMember(doc, editSnap, type, id)
+    return null
+  }
+  // when tinting, a control's fill shows membership (green/red); else its colour or empty grey
   const fillFor = (type: ControlType, id: string, view: { colId: number } | undefined, empty: string) => {
-    if (saveGroup != null) return readGroupMember(doc, saveGroup, type, id) ? SAVE_GREEN : SAVE_RED
+    const m = memberOf(type, id)
+    if (m != null) return m ? SAVE_GREEN : SAVE_RED
     return view ? colorFor(view.colId) : empty
   }
+  const tinting = saveGroup != null || editSnap != null
   const colX = (col: number) => PAD + LEFT + col * COLW + COLW / 2
   const rotCY = (row: number) => TOP + row * ROT_GAP + ROT_R
   const muteY = TOP + ROWS * ROT_GAP + 12
@@ -94,7 +104,7 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup }: SurfacePr
           <circle cx={cx} cy={cy} r={ROT_R} fill={fillFor('rotary', id, rot, '#26262c')}
             stroke={rsel ? '#fff' : '#54545e'} strokeWidth={rsel ? 3 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => onSelect([selKey('rotary', id)], e.shiftKey)} />
-          <circle cx={cx} cy={cy} r={5} fill={saveGroup != null ? (rb ? fillFor('rotbut', id, rb, '#141418') : '#141418') : (rb ? colorFor(rb.colId) : '#141418')}
+          <circle cx={cx} cy={cy} r={5} fill={tinting ? (rb ? fillFor('rotbut', id, rb, '#141418') : '#141418') : (rb ? colorFor(rb.colId) : '#141418')}
             stroke={bsel ? '#fff' : '#3a3a42'} strokeWidth={bsel ? 2 : 1} style={{ cursor: 'pointer' }}
             onClick={(e) => { e.stopPropagation(); onSelect([selKey('rotbut', id)], e.shiftKey) }} />
           <text x={cx} y={cy + ROT_R + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{rot ? trunc(rot.name) : ''}</text>

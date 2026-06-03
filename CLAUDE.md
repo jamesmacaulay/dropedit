@@ -41,11 +41,12 @@ src/model/   pure TS, fully unit-tested — the brains
   controlId.ts    control id <-> {type,layer,col,row}; layer ops (first id digit = layer).
   presetDb.ts     parse a device preset CSV -> params; makeCsvRef (low16 = CSV row index, verified).
   dropProject.ts  typed READ-views: readControl, readLayers, readDevices, readStateValue,
-                  readGroupMember, selGroupLocation.
+                  readGroupMember, selGroupLocation, readSnapshotValue/readSnapshotMember.
   edits.ts        ALL mutations -> return new project text:
                   setControlField, bulkSetControlField/SlotField, assignParam, createControl
                   (withSlot flag), removeControl, addSlot/removeSlot, setSlotField/setSlotParam,
                   setStateValue, setGroupMember, saveSnapshot/loadSnapshot, copyLayer,
+                  setSnapshotValue/setSnapshotMembers/toggleSnapshotMembers (edit a stored scene),
                   copyControlText/pasteControl, setDeviceField/setDeviceCsv.
   enums.ts        MSG_TYPE / BEHAV labels + CONTROL_DEFAULTS per control type.
 src/ui/      React (prop-driven; easy to render-test)
@@ -55,7 +56,9 @@ src/ui/      React (prop-driven; easy to render-test)
   Surface.tsx     the Drop as inline SVG: rotaries(+push), faders, mutes; clickable row/col/All labels.
   Sidebar.tsx     per-selection editor, tabs: General / Output slots / Selection groups.
                   Multi-select uses a [multiple values] pattern (shared value or placeholder).
-  SnapshotGrid.tsx  4x5 snapshot pads + bank selector.
+                  Also exports SnapshotEditPanel: the snapshot Edit-mode sidebar (auto-adapts —
+                  snapshot context when no control is selected, stored-value editor when one is).
+  SnapshotGrid.tsx  4x5 pads (bankMode -> bank picker) + SnapshotMeta (selected pad's name/colour).
   DeviceEditor.tsx  modal to edit the 8 target devices + their preset CSVs.
   palette.ts      the Drop's 12 colour names/hexes (colId order).
 src/data/    devices.ts + devices/<Manufacturer>/<Device>.csv  — bundled preset DB.
@@ -110,8 +113,11 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
 - **`csvRef` high 16 bits** (a checksum/flags) aren't reproduced; only the low-16 CSV row index is
   (verified). Centralized in `presetDb.makeCsvRef`. A control still works without it (CC/ch/name are
   independent) — but verify on hardware.
-- **Snapshot save scope:** `saveSnapshot` currently captures *all* of `state`. On hardware a snapshot
-  stores only the controls in the **selection group** used to save it — make it selection-group-aware.
+- **Snapshot editing:** Save (selection-group-aware), Edit (membership + per-control stored values),
+  and Jump/Load are done. Still TODO: editing a snapshot's own **one-shot MIDI output slots** (the
+  Program Change / Bank messages it fires) — readable today via `readControl(doc,'snp',id).slots`, so
+  the existing `SlotFields` + `setSlotField/addSlot` machinery should cover it (the [Slots] half of
+  the Edit-mode sidebar).
 - The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
   pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so upstream
   typos ship as-is (e.g. Deluge "Delay/Amonut") — fix upstream, not locally, to keep the sync clean.

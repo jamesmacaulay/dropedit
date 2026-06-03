@@ -111,6 +111,18 @@ export function readStateValue(doc: JsonDoc, type: ControlType, id: string): num
   return n && n.kind === 'scalar' && typeof n.value === 'number' ? n.value : undefined
 }
 
+// ---- snapshot stored scene (map.snp.<id>.data.<type>.<ctrlId>) -----------
+/** Value a snapshot stores for a control, if it stores one (else undefined). */
+export function readSnapshotValue(doc: JsonDoc, snpId: string, type: ControlType, id: string): number | undefined {
+  const n = getPath(doc.root, ['map', 'snp', snpId, 'data', type, id])
+  return n && n.kind === 'scalar' && typeof n.value === 'number' ? n.value : undefined
+}
+
+/** Whether a snapshot stores (will recall) a given control — i.e. its id is present in `data`. */
+export function readSnapshotMember(doc: JsonDoc, snpId: string, type: ControlType, id: string): boolean {
+  return !!getPath(doc.root, ['map', 'snp', snpId, 'data', type, id])
+}
+
 export function readDevices(doc: JsonDoc): DeviceView[] {
   const obj = getObject(doc.root, ['device'])
   const out: DeviceView[] = []

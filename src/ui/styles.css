@@ -1,5 +1,6 @@
 :root {
   --bg: #131318; --panel: #1e1e25; --edge: #33333d; --txt: #e7e9ee; --dim: #8a8f99; --accent: #ffb454;
+  --col-w: 210px; /* fixed width of the left column and the right sidebar (surface fills between) */
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--txt);
@@ -35,18 +36,32 @@ label input, label select { color: var(--txt); }
 code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--accent); }
 
 .workspace { display: flex; gap: 16px; padding: 16px; flex: 1; min-height: 0; align-items: stretch; overflow: hidden; }
-.stage { flex: 1; min-width: 520px; min-height: 0; overflow: auto; }
+.stage { flex: 1; min-width: 360px; min-height: 0; overflow: auto; }
 .surface, .surface text { user-select: none; -webkit-user-select: none; }
-.surface { height: auto; } /* with the SVG viewBox, scale proportionally to the container width */
+/* the SVG viewBox scales proportionally: fill the available width between the columns */
+.surface { height: auto; width: 100%; }
 .surface text.lbl:hover { fill: #e7e9ee; }
-.board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
-.left-col { display: flex; flex-direction: column; gap: 10px; }
+/* no-wrap on desktop: the left column is fixed, the surface flexes to fill (mobile query stacks) */
+.board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: nowrap; }
+.left-col { display: flex; flex-direction: column; gap: 10px; width: var(--col-w); flex: 0 0 var(--col-w); }
 .snp-modes { display: flex; gap: 6px; }
 .snp-modes button { flex: 1; }
 .snp-modes button.active { background: var(--accent); color: #222; border-color: var(--accent); }
+/* Snapshots / Banks view tabs above the grid */
+.snp-tabs { display: flex; gap: 4px; }
+.snp-tabs button { flex: 1; }
+.snp-tabs button.active { background: var(--accent); color: #222; border-color: var(--accent); }
+/* keep the mode/tab rows from widening the fixed-width column — small labels, allow shrink */
+.snp-modes button, .snp-tabs button { font-size: 12px; padding: 5px 4px; white-space: nowrap; }
+/* selected snapshot's name + colour, shown directly below the grid */
+.snp-meta { display: flex; flex-direction: column; gap: 8px; }
+.snp-meta label { flex-direction: column; align-items: stretch; gap: 3px; color: var(--dim); font-size: 12px; }
+.snp-meta label input, .snp-meta label select { width: 100%; }
+.snp-meta-empty { color: var(--dim); font-size: 12px; margin: 0; }
 .pad.armed { box-shadow: 0 0 0 2px var(--accent); cursor: copy; }
+.pad.editing { outline: 2px solid var(--accent); outline-offset: 1px; }
 .left-col .devices-btn { width: 100%; }
-.right-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.right-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1 1 0; }
 /* horizontal row of layer buttons above the surface, spanning the controls width (equal widths) */
 .layers { display: flex; flex-wrap: wrap; gap: 6px; }
 .layers button { flex: 1 1 0; min-width: 70px; text-align: center; }
@@ -55,7 +70,7 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sc { margin-left: 6px; opacity: .55; font-size: .85em; }
 .ops .sep { width: 1px; height: 22px; background: var(--edge); }
 
-.sidebar { width: 300px; flex: none; align-self: stretch; min-height: 0; overflow-y: auto;
+.sidebar { width: var(--col-w); flex: none; align-self: stretch; min-height: 0; overflow-y: auto;
   background: var(--panel); border: 1px solid var(--edge);
   border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .sidebar .tabs { display: flex; gap: 4px; position: sticky; top: 0; }
@@ -109,21 +124,29 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
 .sidebar fieldset.groups { border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px 10px; }
 .sidebar fieldset.groups legend { color: var(--accent); font-size: 11px; }
 .sidebar fieldset.groups .chk { flex-direction: row; align-items: center; gap: 6px; color: var(--txt); font-size: 12px; }
-.snp-grid { display: flex; flex-direction: column; gap: 6px; background: #1b1b1f; padding: 10px; border-radius: 10px; }
+/* cap the grid at the column width so it stays the same size when the column goes full-width
+   (stacked / below breakpoint) — centered in the wider container rather than ballooning */
+.snp-grid { display: flex; flex-direction: column; gap: 6px; background: #1b1b1f; padding: 10px; border-radius: 10px;
+  width: 100%; max-width: var(--col-w); margin-inline: auto; }
 .snp-row { display: flex; gap: 6px; }
-.pad { width: 30px; height: 30px; padding: 0; border-radius: 6px; border: 1px solid #54545e; background: #26262c; cursor: pointer; }
+/* pads stretch to fill the column width (4 per row), staying square via aspect-ratio */
+.pad { flex: 1 1 0; aspect-ratio: 1; min-width: 0; padding: 0; border-radius: 6px; border: 1px solid #54545e; background: #26262c; cursor: pointer; }
 .pad.empty { background: #26262c; }
 .pad.sel { outline: 2px solid #fff; outline-offset: 1px; }
 .pad:hover { border-color: var(--accent); }
 
-/* ---- mobile / narrow viewports: stack the layout and scroll the page ---- */
-@media (max-width: 820px) {
+/* ---- narrow viewports: stack the layout and scroll the page ----
+   Side-by-side chrome ≈ 486px (two 210px columns + gaps/padding), so the surface = viewport − 486.
+   1000px keeps common tablets in landscape (basic iPad 1024, 10.2" 1080, 11" Pro 1194, …) side-by-side
+   with a ≥ ~515px surface; only phones / small windows (≤1000) stack to full width. */
+@media (max-width: 1000px) {
   .app { height: auto; min-height: 100vh; overflow: visible; }
   .workspace { flex-direction: column; align-items: stretch; overflow: visible;
     padding: 12px; gap: 12px; }
   .stage { min-width: 0; overflow: visible; }
   .board { flex-direction: column; align-items: stretch; gap: 14px; }
-  .left-col, .right-col { width: 100%; }
+  /* stacked: reset the desktop fixed width / flex so both columns span full width */
+  .left-col, .right-col { width: 100%; flex: none; }
   .sidebar { width: 100%; flex: 1 1 auto; overflow: visible; }
   .sidebar .tabs { position: static; } /* the page scrolls now, so don't pin to the viewport */
   .device-grid { grid-template-columns: 1fr 1fr; } /* 4 cols is too cramped on a phone */

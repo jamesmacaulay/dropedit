@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { App } from '../src/ui/App'
 import { Surface } from '../src/ui/Surface'
-import { Sidebar } from '../src/ui/Sidebar'
-import { SnapshotGrid } from '../src/ui/SnapshotGrid'
+import { Sidebar, SnapshotEditPanel } from '../src/ui/Sidebar'
+import { SnapshotGrid, SnapshotMeta } from '../src/ui/SnapshotGrid'
 import { parseJson } from '../src/model/jsonDoc'
 import { loadBundled } from '../src/data/devices'
 
@@ -73,16 +73,29 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).not.toContain('[multiple values]') // ...not "[multiple values]"
   })
 
-  it('SnapshotGrid renders pads and Sidebar shows a snapshot editor', () => {
+  it('SnapshotGrid renders pads; SnapshotMeta shows the selected pad name/colour below the grid', () => {
     const doc = parseJson(OLD)
-    const grid = renderToString(<SnapshotGrid doc={doc} bank={0} selected={new Set()} onSelect={() => {}} onPickBank={() => {}} />)
-    expect(grid).toContain('Snapshots')
+    const grid = renderToString(<SnapshotGrid doc={doc} bank={0} bankMode={false} selected={new Set()} onSelect={() => {}} onPickBank={() => {}} />)
     expect(grid).toContain('class="pad')
-    expect(grid).toContain('Banks') // bank toggle button
+    const banks = renderToString(<SnapshotGrid doc={doc} bank={0} bankMode={true} selected={new Set()} onSelect={() => {}} onPickBank={() => {}} />)
+    expect(banks).toContain('class="pad bank') // bank picker mode
+    const meta = renderToString(<SnapshotMeta text={OLD} doc={doc} id="0000" onChange={() => {}} />)
+    expect(meta).toContain('SNP 01-1-1') // editable name lives below the grid now
+  })
+
+  it('Sidebar snapshot view points at the below-grid name/colour and the Edit/Jump-Load modes', () => {
+    const doc = parseJson(OLD)
     const side = renderToString(<Sidebar text={OLD} doc={doc} deviceFor={() => null} selection={['snp:0000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
     expect(side).toContain('Snapshot 0000')
-    expect(side).toContain('SNP 01-1-1') // its name
-    expect(side).toContain('Save')
-    expect(side).toContain('Load')
+    expect(side).toContain('Jump/Load')
+  })
+
+  it('SnapshotEditPanel edits a selected control’s stored value in the chosen snapshot', () => {
+    const doc = parseJson(OLD)
+    const empty = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap={null} selection={[]} onChange={() => {}} />)
+    expect(empty).toContain('Click a filled snapshot pad') // no pad picked yet
+    const editing = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap="0000" selection={['rotary:030']} onChange={() => {}} />)
+    expect(editing).toContain('Stored in this snapshot')
+    expect(editing).toContain('Stored value') // rotary 030 is stored, so the value editor shows
   })
 })

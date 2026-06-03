@@ -2,12 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { load, readControl, readLayers, readDevices, mappedIds, readStateValue, readGroupMember, selGroupLocation } from '../src/model/dropProject'
+import { load, readControl, readLayers, readDevices, mappedIds, readStateValue, readGroupMember, selGroupLocation, readSnapshotValue, readSnapshotMember } from '../src/model/dropProject'
 import {
   setControlField, setSlotField, bulkSetSlotField, assignParam, createControl, removeControl,
   setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls,
   copySnapshots, pasteSnapshots, formatValue, setStateValue,
   addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember, toggleGroupMember,
+  setSnapshotValue, setSnapshotMembers, toggleSnapshotMembers,
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
 import type { PresetParam } from '../src/model/presetDb'
@@ -191,6 +192,47 @@ describe('snapshots', () => {
     const t = toggleGroupMember(OLD, 0, [{ type: 'fader', id: '00' }])
     expect(readGroupMember(load(t), 0, 'fader', '00')).toBe(false)
     expect(readGroupMember(load(toggleGroupMember(t, 0, [{ type: 'fader', id: '00' }])), 0, 'fader', '00')).toBe(true)
+  })
+})
+
+describe('editing a snapshot scene (setSnapshotValue / membership)', () => {
+  // OLD's snapshot 0000 stores a full scene (rotary/rotbut/mute/fader).
+  it('reads a stored value and membership', () => {
+    const doc = load(OLD)
+    expect(readSnapshotValue(doc, '0000', 'rotary', '030')).toBeCloseTo(0.19958)
+    expect(readSnapshotMember(doc, '0000', 'rotary', '030')).toBe(true)
+    expect(readSnapshotMember(doc, '0000', 'rotary', '999')).toBe(false)
+  })
+  it('sets a stored value, leaving neighbours and the live state untouched', () => {
+    const out = setSnapshotValue(OLD, '0000', 'rotary', '030', 0.5)
+    const j = obj(out)
+    expect(j.map.snp['0000'].data.rotary['030']).toBe(0.5)
+    expect(j.map.snp['0000'].data.rotary['031']).toBeCloseTo(0.23907) // sibling unchanged
+    expect(j.state.rotary['030']).toBeCloseTo(0.19958)                // live state untouched
+    expect(j.map.snp['0001']).toEqual(obj(OLD).map.snp['0001'])       // other snapshot untouched
+  })
+  it('removing a member drops only its id from the scene', () => {
+    const out = obj(setSnapshotMembers(OLD, '0000', [{ type: 'rotary', id: '030' }], false))
+    expect(out.map.snp['0000'].data.rotary['030']).toBeUndefined()
+    expect(out.map.snp['0000'].data.rotary['031']).toBeCloseTo(0.23907)
+  })
+  it('adding a member captures the control’s current live value', () => {
+    let t = setStateValue(OLD, 'rotary', '030', 0.42)        // live value to capture
+    t = setSnapshotMembers(t, '0000', [{ type: 'rotary', id: '030' }], false) // remove it
+    expect(readSnapshotMember(load(t), '0000', 'rotary', '030')).toBe(false)
+    t = setSnapshotMembers(t, '0000', [{ type: 'rotary', id: '030' }], true)  // add back
+    expect(readSnapshotValue(load(t), '0000', 'rotary', '030')).toBe(0.42)
+  })
+  it('toggleSnapshotMembers flips membership, recapturing live value on re-add', () => {
+    let t = setStateValue(OLD, 'rotary', '030', 0.7)
+    t = toggleSnapshotMembers(t, '0000', [{ type: 'rotary', id: '030' }])     // present -> removed
+    expect(readSnapshotMember(load(t), '0000', 'rotary', '030')).toBe(false)
+    t = toggleSnapshotMembers(t, '0000', [{ type: 'rotary', id: '030' }])     // absent -> added @ live
+    expect(readSnapshotValue(load(t), '0000', 'rotary', '030')).toBe(0.7)
+  })
+  it('does nothing on an empty pad / removing an absent member', () => {
+    expect(setSnapshotValue(OLD, '0099', 'rotary', '000', 0.5)).toBe(OLD)      // no such snapshot
+    expect(setSnapshotMembers(OLD, '0000', [{ type: 'rotary', id: '999' }], false)).toBe(OLD)
   })
 })
 
