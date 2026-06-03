@@ -4,7 +4,7 @@ import { readLayers, readDevices, readControl, NUM_SEL_GROUPS } from '../model/d
 import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, saveSnapshot, loadSnapshot, setGroupMember, toggleGroupMember, setSnapshotMembers, toggleSnapshotMembers, type CopiedControl } from '../model/edits'
 import { loadBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
-import { isPositional, withLayer, withBank, type ControlType } from '../model/controlId'
+import { isPositional, withLayer, withBank, controlIdsForLayer, type ControlType } from '../model/controlId'
 import { COLOR_NAMES } from './palette'
 import { Surface, selKey } from './Surface'
 import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
@@ -210,6 +210,11 @@ export function App() {
       return Array.from(set)
     })
   }
+  // select every control on the current layer (same as the surface's "All" label / Cmd+A)
+  function selectAllInLayer() {
+    const types: ControlType[] = ['rotary', 'rotbut', 'fader', 'mute']
+    setSelection(types.flatMap((type) => controlIdsForLayer(type, layer).map((id) => selKey(type, id))))
+  }
   function setActive(tgts: { type: ControlType; id: string }[], active: boolean) {
     if (!text) return
     let t = text
@@ -358,7 +363,8 @@ export function App() {
       if (e.key === 'Escape' && snapMode) { setSnapMode(null); setEditSnap(null); return }
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
-      if (k === 'c' && canCopy) { e.preventDefault(); doCopy() }
+      if (k === 'a') { e.preventDefault(); selectAllInLayer() }
+      else if (k === 'c' && canCopy) { e.preventDefault(); doCopy() }
       else if (k === 'x' && canCopy) { e.preventDefault(); doCut() }
       else if (k === 'v' && canPaste) { e.preventDefault(); doPaste() }
     }
@@ -455,7 +461,7 @@ export function App() {
                   ))}
                 </div>
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect}
-                  saveGroup={snapMode === 'save' ? snapDraft.group : null} editSnap={snapMode === 'edit' ? editSnap : null} />
+                  saveGroup={snapMode === 'save' ? snapDraft.group : null} editSnap={snapMode === 'edit' ? editSnap : null} selectAllHint={`${MOD}A`} />
                 {snapMode === 'save' ? (
                   <div className="ops">
                     <span className="muted">Group {snapDraft.group + 1}: green = saved · red = skipped</span>

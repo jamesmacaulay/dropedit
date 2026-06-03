@@ -18,6 +18,8 @@ export interface SurfaceProps {
   saveGroup?: number | null
   /** snapshot edit mode: tint each control green (stored in this snapshot) / red (not) */
   editSnap?: string | null
+  /** keyboard hint (e.g. "⌘A") shown on the "All" label button */
+  selectAllHint?: string
 }
 
 const PAD = 16, LEFT = 46, COLW = 104, ROT_R = 19, ROT_GAP = 56, TOP = 48, MUTE_H = 24, FADER_H = 120
@@ -27,7 +29,7 @@ function trunc(s: string): string {
   return s.length > 12 ? s.slice(0, 11) + '…' : s
 }
 
-export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap }: SurfaceProps) {
+export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, selectAllHint }: SurfaceProps) {
   // membership tint: in save mode by selection group, in snapshot edit mode by stored scene; null = off
   const memberOf = (type: ControlType, id: string): boolean | null => {
     if (saveGroup != null) return readGroupMember(doc, saveGroup, type, id)
@@ -64,20 +66,22 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap }:
 
   const cells: ReactNode[] = []
 
-  // a rounded-rect label "button" that selects a group of controls
-  const labelBtn = (key: string, x: number, y: number, w: number, text: string, keys: () => string[]) => {
+  // a rounded-rect label "button" that selects a group of controls (with an optional shortcut hint)
+  const labelBtn = (key: string, x: number, y: number, w: number, text: string, keys: () => string[], hint?: string) => {
     const on = full(keys())
     return (
       <g key={key} style={{ cursor: 'pointer' }} onClick={(e) => onSelect(keys(), e.shiftKey)}>
         <rect x={x} y={y} width={w} height={LBL_H} rx={6} fill={on ? '#2f3340' : '#23232a'} stroke={on ? '#fff' : '#454552'} strokeWidth={on ? 2 : 1} />
-        <text x={x + w / 2} y={y + LBL_H / 2 + 3.5} textAnchor="middle" fontSize={10} fill={on ? '#fff' : '#9aa0ad'}>{text}</text>
+        <text x={x + w / 2} y={y + LBL_H / 2 + 3.5} textAnchor="middle" fontSize={10} fill={on ? '#fff' : '#9aa0ad'}>
+          {text}{hint && <tspan dx={3} fontSize={8} fillOpacity={0.55}>{hint}</tspan>}
+        </text>
       </g>
     )
   }
 
-  // top-left corner: "All" selects every control on this layer
+  // top-left corner: "All" selects every control on this layer (also Cmd/Ctrl+A)
   const headerY = 8
-  cells.push(labelBtn('all', PAD, headerY, LEFT - 8, 'All', allKeys))
+  cells.push(labelBtn('all', PAD, headerY, LEFT - 8, 'All', allKeys, selectAllHint))
 
   // column header buttons
   for (let col = 0; col < COLS; col++) {
