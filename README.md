@@ -3,7 +3,7 @@
 A browser-based editor for **Neuzeit Drop** project files, hosted at https://jamesmacaulay.github.io/dropedit/.
 
 Features:
-- Open a Drop project `.json` file from your computer or start from a Clean Init or DAW Init template, download after editing
+- Import a Drop project `.json` file from your computer or start from a Clean Init or DAW Init template, download after editing
 - Click / shift-click / row & column / "All" selection, with multi-select batch editing of any or all controls in a layer at once
 - Copy & paste multiple selected controls within or between layers
 - Undo / redo with autosave to localStorage
