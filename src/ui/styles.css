@@ -1,6 +1,7 @@
 :root {
   --bg: #131318; --panel: #1e1e25; --edge: #33333d; --txt: #e7e9ee; --dim: #8a8f99; --accent: #ffb454;
-  --col-w: 210px; /* fixed width of the left column and the right sidebar (surface fills between) */
+  --col-w: 210px;  /* fixed width of the left column (+ snapshot grid cap) */
+  --side-w: 280px; /* fixed width of the right sidebar; the surface fills the space between */
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--txt);
@@ -70,7 +71,7 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sc { margin-left: 6px; opacity: .55; font-size: .85em; }
 .ops .sep { width: 1px; height: 22px; background: var(--edge); }
 
-.sidebar { width: var(--col-w); flex: none; align-self: stretch; min-height: 0; overflow-y: auto;
+.sidebar { width: var(--side-w); flex: none; align-self: stretch; min-height: 0; overflow-y: auto;
   background: var(--panel); border: 1px solid var(--edge);
   border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .sidebar .tabs { display: flex; gap: 4px; position: sticky; top: 0; }
@@ -136,9 +137,9 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
 .pad:hover { border-color: var(--accent); }
 
 /* ---- narrow viewports: stack the layout and scroll the page ----
-   Side-by-side chrome ≈ 486px (two 210px columns + gaps/padding), so the surface = viewport − 486.
+   Side-by-side chrome ≈ 556px (210px left col + 280px sidebar + gaps/padding), so surface = viewport − 556.
    1000px keeps common tablets in landscape (basic iPad 1024, 10.2" 1080, 11" Pro 1194, …) side-by-side
-   with a ≥ ~515px surface; only phones / small windows (≤1000) stack to full width. */
+   with a ≥ ~445px surface; only phones / small windows (≤1000) stack to full width. */
 @media (max-width: 1000px) {
   .app { height: auto; min-height: 100vh; overflow: visible; }
   .workspace { flex-direction: column; align-items: stretch; overflow: visible;
