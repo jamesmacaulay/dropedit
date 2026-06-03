@@ -6,7 +6,7 @@ export interface PresetParam {
   /** 0-based data-row index (header excluded). This IS the low 16 bits of csvRef. */
   rowIndex: number
   section: string
-  /** parameter_name as spelled in the CSV (may contain typos, e.g. "Amonut"). */
+  /** parameter_name exactly as spelled in the CSV (vendored verbatim, so it may contain typos). */
   name: string
   /** cc_msb as a number, or null for NRPN-only rows. Becomes a control slot's msgNr. */
   cc: number | null

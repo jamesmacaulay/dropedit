@@ -118,8 +118,9 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
   `setSlotField` / `addSlot` on type `'snp'`), and Jump/Load. A snapshot's output slots get inserted
   after its `data` scene in the entry and that layout isn't hardware-verified — confirm on a real Drop.
 - The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
-  pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so upstream
-  typos ship as-is (e.g. Deluge "Delay/Amonut") — fix upstream, not locally, to keep the sync clean.
+  pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so any upstream
+  typos ship as-is — fix them upstream, not locally, to keep the sync clean. (Note: a CSV fix upstream
+  can break the presetDb tests, which assert on specific param names/rows — update those alongside.)
 - **Hardware status:** projects exported by the app are used on real Drop hardware (control
   mappings, output slots, values, snapshots save/jump/load, decoded enums all confirmed in practice).
   Only two narrow bits remain unconfirmed on hardware: the `csvRef` high-16 checksum (above; benign —

@@ -20,7 +20,7 @@ describe('presetDb', () => {
 
   it('maps params to the correct rowIndex + cc (matches verified csvRef low bytes)', () => {
     // CSV line numbers → rowIndex = line - 2; these indices equal the low 16 of real csvRefs.
-    expect(find(dev.params, 'Delay', 'Amonut')).toMatchObject({ rowIndex: 15, cc: 52 }) // sic: upstream typo (vendored verbatim)
+    expect(find(dev.params, 'Delay', 'Amount')).toMatchObject({ rowIndex: 15, cc: 52 })
     expect(find(dev.params, 'Delay', 'Rate')).toMatchObject({ rowIndex: 16, cc: 53 })
     expect(find(dev.params, 'Reverb', 'Reverb amount')).toMatchObject({ rowIndex: 75, cc: 91 })
     expect(find(dev.params, 'High-pass filter', 'Frequency')).toMatchObject({ rowIndex: 46, cc: 81 })
