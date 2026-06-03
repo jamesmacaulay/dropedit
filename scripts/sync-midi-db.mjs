@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PINNED_COMMIT = 'bc37661f9a108ec7a86d9fee2fd1262484f038e8'
+const PINNED_COMMIT = '0995e3ae6278f898589cf778b2d5688ca30fc843'
 const REPO = 'pencilresearch/midi'
 const LICENSE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt'
 

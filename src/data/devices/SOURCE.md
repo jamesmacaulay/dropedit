@@ -4,7 +4,7 @@ Vendored **verbatim** (unmodified) from [pencilresearch/midi](https://github.com
 **Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA-4.0)**.
 
 - Source: https://github.com/pencilresearch/midi
-- Pinned commit: `bc37661f9a108ec7a86d9fee2fd1262484f038e8`
+- Pinned commit: `0995e3ae6278f898589cf778b2d5688ca30fc843`
 - Files: 393 CSVs
 - License text: [./LICENSE](./LICENSE) · deed: https://creativecommons.org/licenses/by-sa/4.0/
 
