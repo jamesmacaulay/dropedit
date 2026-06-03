@@ -343,7 +343,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <strong>dropedit</strong>
-        <label className="btn">Open project
+        <label className="btn">Import project
           <input type="file" accept=".json" hidden onChange={(e) => {
             const f = e.target.files?.[0]
             e.target.value = '' // allow re-selecting the same file to reload it
@@ -481,8 +481,8 @@ export function App() {
       {pendingLoad && (
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setPendingLoad(null) }}>
           <div className="modal confirm">
-            <div className="modal-head"><h2>Discard unsaved changes?</h2></div>
-            <p className="hint">Loading <strong>{pendingLoad.label}</strong> replaces your current project, and this can’t be undone. Download first if you want to keep your current changes.</p>
+            <div className="modal-head"><h2>Discard changes?</h2></div>
+            <p className="hint">Loading <strong>{pendingLoad.label}</strong> replaces your current project, and this can’t be undone. Download the project to save your work, if you haven’t done so already.</p>
             <div className="confirm-actions">
               <button onClick={() => setPendingLoad(null)}>Cancel</button>
               <button className="danger" onClick={() => { const r = pendingLoad.run; setPendingLoad(null); r() }}>Discard &amp; load</button>
