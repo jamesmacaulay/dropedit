@@ -32,6 +32,19 @@ function readStored(): { text: string; name: string } | null {
     return t != null ? { text: t, name: localStorage.getItem(STORAGE_FILE) || 'project.json' } : null
   } catch { return null }
 }
+// A quick "is this actually a Drop project?" gate. Uses STRICT native JSON.parse (the span-preserving
+// parseJson is lenient and won't reject junk) plus a check for the core top-level sections.
+function looksLikeDropProject(t: string): boolean {
+  try {
+    const j = JSON.parse(t)
+    return !!j && typeof j === 'object' && (!!j.map || !!j.state || !!j.device)
+  } catch { return false }
+}
+// Restore the saved project only if it still looks like a Drop project (don't boot a broken state).
+function readValidStored(): { text: string; name: string } | null {
+  const s = readStored()
+  return s && looksLikeDropProject(s.text) ? s : null
+}
 function persistProject(text: string, name?: string) {
   if (typeof localStorage === 'undefined') return
   try {
@@ -45,9 +58,12 @@ function persistFileName(name: string) {
 }
 
 export function App() {
-  // First load restores the saved project; with nothing saved, start from the clean-init blank slate.
-  const [text, setText] = useState<string | null>(() => readStored()?.text ?? CLEAN_INIT)
-  const [fileName, setFileName] = useState(() => readStored()?.name ?? 'clean-init.json')
+  // First load restores the saved project (if it still parses); else start from the clean-init slate.
+  const [text, setText] = useState<string | null>(() => readValidStored()?.text ?? CLEAN_INIT)
+  const [fileName, setFileName] = useState(() => readValidStored()?.name ?? 'clean-init.json')
+  const [loadError, setLoadError] = useState<string | null>(null) // shown when an imported file won't parse
+  // first-run notice (unofficial tool / keep backups / how to start); dismissed flag persists
+  const [welcomed, setWelcomed] = useState(() => { try { return localStorage.getItem('dropedit:welcomed') === '1' } catch { return true } })
   const [layer, setLayer] = useState(0)
   const [bank, setBank] = useState(0)
   const [selection, setSelection] = useState<string[]>([])
@@ -82,15 +98,15 @@ export function App() {
   useEffect(() => {
     if (!doc) { setDevicePresets(new Map()); return }
     let cancelled = false
-    ;(async () => {
-      const m = new Map<number, PresetDevice>()
-      for (const d of readDevices(doc)) {
-        const up = uploads.get(d.index)
-        if (up) { m.set(d.index, up); continue }
-        if (d.csvInUse && d.csvFile) { const pd = await loadBundledByPathFile(d.csvPath, d.csvFile); if (pd) m.set(d.index, pd) }
-      }
-      if (!cancelled) setDevicePresets(m)
-    })()
+      ; (async () => {
+        const m = new Map<number, PresetDevice>()
+        for (const d of readDevices(doc)) {
+          const up = uploads.get(d.index)
+          if (up) { m.set(d.index, up); continue }
+          if (d.csvInUse && d.csvFile) { const pd = await loadBundledByPathFile(d.csvPath, d.csvFile); if (pd) m.set(d.index, pd) }
+        }
+        if (!cancelled) setDevicePresets(m)
+      })()
     return () => { cancelled = true }
   }, [doc, uploads])
   const deviceFor = (t: number) => devicePresets.get(t) ?? null
@@ -141,7 +157,18 @@ export function App() {
   }
 
   function loadProject(file: File) {
-    file.text().then((t) => loadInit(t, file.name))
+    file.text().then((t) => {
+      if (!looksLikeDropProject(t)) {
+        setLoadError(`Couldn’t read “${file.name}” as a Drop project — make sure it’s a valid Drop .json export.`)
+        return
+      }
+      setLoadError(null)
+      loadInit(t, file.name)
+    }).catch(() => setLoadError(`Couldn’t read “${file.name}”.`))
+  }
+  function dismissWelcome() {
+    setWelcomed(true)
+    try { localStorage.setItem('dropedit:welcomed', '1') } catch { /* ignore */ }
   }
   // loading a project is a fresh start: reset the undo history to it.
   function loadInit(t: string, name: string) {
@@ -364,6 +391,19 @@ export function App() {
         </a>
       </header>
 
+      {!welcomed && (
+        <div className="notice welcome">
+          <span><strong>dropedit</strong> is an unofficial, community-made editor for Neuzeit Drop projects (not affiliated with Neuzeit). It preserves data it doesn’t touch byte-for-byte, but <strong>please keep a backup of your projects</strong>.</span>
+          <button onClick={dismissWelcome}>Got it</button>
+        </div>
+      )}
+      {loadError && (
+        <div className="notice error">
+          <span>{loadError}</span>
+          <button onClick={() => setLoadError(null)}>Dismiss</button>
+        </div>
+      )}
+
       {!doc ? (
         <main className="empty">
           <p>Open a Drop <code>.json</code> project to begin. Everything stays in your browser.</p>
@@ -492,7 +532,7 @@ export function App() {
       )}
 
       <footer className="appfoot">
-        Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
+        Unofficial community tool, not affiliated with Neuzeit. · Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
         licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY-SA&nbsp;4.0</a>.
       </footer>
     </div>

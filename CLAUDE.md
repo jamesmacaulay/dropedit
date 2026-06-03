@@ -120,7 +120,11 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
 - The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
   pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so upstream
   typos ship as-is (e.g. Deluge "Delay/Amonut") — fix upstream, not locally, to keep the sync clean.
-- **Not verified on real hardware.** Encourage loading a generated `.json` on an actual Drop.
+- **Hardware status:** projects exported by the app are used on real Drop hardware (control
+  mappings, output slots, values, snapshots save/jump/load, decoded enums all confirmed in practice).
+  Only two narrow bits remain unconfirmed on hardware: the `csvRef` high-16 checksum (above; benign —
+  controls work without it) and the placement of a snapshot's own output slots (added in the snapshot
+  Edit work, inserted after `data`; not yet hardware-tested). Still: encourage keeping backups.
 
 ## Conventions
 
