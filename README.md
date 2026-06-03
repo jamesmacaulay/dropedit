@@ -61,6 +61,10 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
 - The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
   Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
   Unknown/future codes degrade gracefully to a "Custom" raw-value field.
+- **You can save invalid data.** Some fields constrain the valid values of others. The Drop's own UI
+  enforces those invariants; dropedit doesn't enforce all of them, so you can export a project with
+  combinations the hardware wouldn't let you create. The Drop likely tolerates most gracefully, but
+  unusual values may give unusual results.
 
 ## Hosting
 
