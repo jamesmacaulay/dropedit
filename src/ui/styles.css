@@ -67,11 +67,14 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .pad.armed { box-shadow: 0 0 0 2px var(--accent); cursor: copy; }
 .pad.editing { outline: 2px solid var(--accent); outline-offset: 1px; }
 .left-col .devices-btn { width: 100%; }
-.right-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1 1 0; }
-/* horizontal row of layer buttons above the surface, spanning the controls width (equal widths) */
-.layers { display: flex; flex-wrap: wrap; gap: 6px; }
-.layers button { flex: 1 1 0; min-width: 70px; text-align: center; }
+/* container-type lets the layer row react to the controls width (not the viewport), so the
+   8->4+4 split happens whenever the row is too narrow, in both side-by-side and stacked modes */
+.right-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1 1 0; container-type: inline-size; }
+/* layer buttons: 8 across when they fit; otherwise exactly two rows of four (see @container below) */
+.layers { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.layers button { text-align: center; }
 .layers button.active { background: var(--accent); color: #222; border-color: var(--accent); }
+@container (max-width: 600px) { .layers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .ops { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .sc { margin-left: 6px; opacity: .55; font-size: .85em; }
 .ops .sep { width: 1px; height: 22px; background: var(--edge); }
@@ -159,11 +162,12 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
   .board { flex-direction: column; align-items: stretch; gap: 14px; }
   /* stacked: reset the desktop fixed width / flex so both columns span full width */
   .left-col, .right-col { width: 100%; flex: none; }
-  /* snapshot controls sit to the RIGHT of the grid, with the mode buttons stacked vertically */
+  /* snapshot controls sit to the RIGHT of the grid; all the buttons (tabs + modes) stack
+     vertically, and the controls flex to fit the leftover width so they never overflow the column */
   .snp-area { flex-direction: row; align-items: flex-start; gap: 14px; }
-  .snp-gridwrap { flex: 0 0 var(--col-w); }
-  .snp-controls { flex: 0 0 var(--col-w); order: 1; }
-  .snp-modes { flex-direction: column; }
+  .snp-gridwrap { flex: 0 1 var(--col-w); min-width: 0; }
+  .snp-controls { flex: 1 1 0; max-width: var(--col-w); min-width: 0; order: 1; }
+  .snp-tabs, .snp-modes { flex-direction: column; }
   .sidebar { width: 100%; flex: 1 1 auto; overflow: visible; }
   .sidebar .tabs { position: static; } /* the page scrolls now, so don't pin to the viewport */
   .device-grid { grid-template-columns: 1fr 1fr; } /* 4 cols is too cramped on a phone */
