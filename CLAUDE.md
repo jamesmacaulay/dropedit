@@ -57,7 +57,7 @@ src/ui/      React (prop-driven; easy to render-test)
   Sidebar.tsx     per-selection editor, tabs: General / Output slots / Selection groups.
                   Multi-select uses a [multiple values] pattern (shared value or placeholder).
                   Also exports SnapshotEditPanel: the snapshot Edit-mode sidebar (auto-adapts —
-                  snapshot context when no control is selected, stored-value editor when one is).
+                  the snapshot's own output slots when no control is selected, stored-value editor when one is).
   SnapshotGrid.tsx  4x5 pads (bankMode -> bank picker) + SnapshotMeta (selected pad's name/colour).
   DeviceEditor.tsx  modal to edit the 8 target devices + their preset CSVs.
   palette.ts      the Drop's 12 colour names/hexes (colId order).
@@ -113,11 +113,10 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
 - **`csvRef` high 16 bits** (a checksum/flags) aren't reproduced; only the low-16 CSV row index is
   (verified). Centralized in `presetDb.makeCsvRef`. A control still works without it (CC/ch/name are
   independent) — but verify on hardware.
-- **Snapshot editing:** Save (selection-group-aware), Edit (membership + per-control stored values),
-  and Jump/Load are done. Still TODO: editing a snapshot's own **one-shot MIDI output slots** (the
-  Program Change / Bank messages it fires) — readable today via `readControl(doc,'snp',id).slots`, so
-  the existing `SlotFields` + `setSlotField/addSlot` machinery should cover it (the [Slots] half of
-  the Edit-mode sidebar).
+- **Snapshot editing** is complete: Save (selection-group-aware), Edit (membership + per-control
+  stored values + the snapshot's own **one-shot MIDI output slots**, reusing SlotList /
+  `setSlotField` / `addSlot` on type `'snp'`), and Jump/Load. A snapshot's output slots get inserted
+  after its `data` scene in the entry and that layout isn't hardware-verified — confirm on a real Drop.
 - The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
   pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so upstream
   typos ship as-is (e.g. Deluge "Delay/Amonut") — fix upstream, not locally, to keep the sync clean.

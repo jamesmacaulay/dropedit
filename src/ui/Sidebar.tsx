@@ -78,9 +78,10 @@ function SnapshotEditor({ doc, id }: SidebarProps & { id: string }) {
 
 // ---------------- snapshot edit mode ----------------
 // Sidebar while editing snapshot `editSnap`. Auto-adapts: with no control selected it shows the
-// snapshot (its slots — coming in a follow-up); with controls selected it edits their stored values.
-export function SnapshotEditPanel({ text, doc, editSnap, selection, onChange }: {
-  text: string; doc: JsonDoc; editSnap: string | null; selection: string[]; onChange: (t: string, coalesce?: boolean) => void
+// snapshot's own one-shot MIDI output slots; with controls selected it edits their stored values.
+export function SnapshotEditPanel({ text, doc, editSnap, selection, deviceFor, onChange }: {
+  text: string; doc: JsonDoc; editSnap: string | null; selection: string[]
+  deviceFor: (target: number) => PresetDevice | null; onChange: (t: string, coalesce?: boolean) => void
 }) {
   if (!editSnap) {
     return <aside className="sidebar"><h2>Edit snapshot</h2>
@@ -88,11 +89,12 @@ export function SnapshotEditPanel({ text, doc, editSnap, selection, onChange }: 
   }
   const hasControls = selection.some((k) => !k.startsWith('snp:'))
   if (hasControls) return <SnapshotControlEditor text={text} doc={doc} snpId={editSnap} selection={selection} onChange={onChange} />
+  const view = readControl(doc, 'snp', editSnap)
   return (
     <aside className="sidebar">
       <h2>{`Snapshot ${editSnap}`}</h2>
-      <p className="hint">Select controls on the surface to edit the values this snapshot stores. Use <strong>Select/Deselect/Toggle</strong> (S/D/T) below the faders to change which controls it stores.</p>
-      <p className="meta">Its one-shot MIDI output slots will be editable here in an upcoming update.</p>
+      <p className="hint">The snapshot’s own one-shot MIDI output slots — fired when it executes (e.g. a Program Change / Bank). Select controls on the surface to edit the values it stores instead.</p>
+      <SlotList text={text} targets={[{ type: 'snp', id: editSnap, view }]} deviceFor={deviceFor} devices={readDevices(doc)} defaultColId={view?.colId ?? 0} onChange={onChange} />
     </aside>
   )
 }

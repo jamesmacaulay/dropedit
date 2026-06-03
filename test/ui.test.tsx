@@ -92,10 +92,17 @@ describe('UI smoke (renderToString, no DOM)', () => {
 
   it('SnapshotEditPanel edits a selected control’s stored value in the chosen snapshot', () => {
     const doc = parseJson(OLD)
-    const empty = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap={null} selection={[]} onChange={() => {}} />)
+    const empty = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap={null} selection={[]} deviceFor={() => null} onChange={() => {}} />)
     expect(empty).toContain('Click a filled snapshot pad') // no pad picked yet
-    const editing = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap="0000" selection={['rotary:030']} onChange={() => {}} />)
+    const editing = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap="0000" selection={['rotary:030']} deviceFor={() => null} onChange={() => {}} />)
     expect(editing).toContain('Stored in this snapshot')
     expect(editing).toContain('Stored value') // rotary 030 is stored, so the value editor shows
+  })
+
+  it('SnapshotEditPanel shows the snapshot’s own MIDI output slots when no control is selected', () => {
+    const doc = parseJson(OLD)
+    const slots = renderToString(<SnapshotEditPanel text={OLD} doc={doc} editSnap="0000" selection={[]} deviceFor={() => null} onChange={() => {}} />)
+    expect(slots).toContain('output slots')   // the intro hint
+    expect(slots).toContain('Output slot 0')   // SlotList renders the snapshot's slots
   })
 })

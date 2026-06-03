@@ -234,6 +234,15 @@ describe('editing a snapshot scene (setSnapshotValue / membership)', () => {
     expect(setSnapshotValue(OLD, '0099', 'rotary', '000', 0.5)).toBe(OLD)      // no such snapshot
     expect(setSnapshotMembers(OLD, '0000', [{ type: 'rotary', id: '999' }], false)).toBe(OLD)
   })
+  it('adds and edits a snapshot output slot, preserving its stored scene', () => {
+    let t = addSlot(OLD, 'snp', '0000', '0')                       // snapshot's own one-shot slot
+    t = setSlotField(t, 'snp', '0000', '0', 'msgType', 9)          // Program Change
+    t = setSlotField(t, 'snp', '0000', '0', 'maxOut', 5)           // program #
+    const j = obj(t)
+    expect(j.map.snp['0000']['0']).toMatchObject({ inUse: 1, msgType: 9, maxOut: 5 })
+    expect(readControl(load(t), 'snp', '0000')!.slots[0]).toMatchObject({ key: '0', msgType: 9 })
+    expect(j.map.snp['0000'].data.rotary['030']).toBeCloseTo(0.19958) // stored scene untouched
+  })
 })
 
 describe('devices', () => {

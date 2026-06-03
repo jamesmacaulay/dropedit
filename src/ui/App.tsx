@@ -467,7 +467,7 @@ export function App() {
               <button onClick={() => setSnapMode(null)}>Cancel</button>
             </aside>
           ) : snapMode === 'edit' ? (
-            <SnapshotEditPanel text={text!} doc={doc} editSnap={editSnap} selection={selection} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} />
+            <SnapshotEditPanel text={text!} doc={doc} editSnap={editSnap} selection={selection} deviceFor={deviceFor} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} />
           ) : (
             <Sidebar text={text!} doc={doc} deviceFor={deviceFor} selection={selection} defaultColId={layers[layer]?.colId ?? 0} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onSetActive={setActive} />
           )}

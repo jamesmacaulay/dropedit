@@ -10,7 +10,7 @@ Features:
 - MIDI Output Device management with included preset CSVs from [pencilresearch/midi](https://github.com/pencilresearch/midi) for human-readable parameter names
 - Per-control editing of name, value, color, behavior, LED style, MIDI output slots, and selection groups
 - Per-output-slot editing of device, MIDI channel, message type, message value (assignable with friendly param names from device preset), curve config, etc.
-- Snapshot management mirroring the Drop UI: **Save** (selection-group-aware) and **Jump/Load** (merge-recall), plus an **Edit** mode to change which controls a snapshot stores (green/red on the surface) and the value it stores for each
+- Snapshot management mirroring the Drop UI: **Save** (selection-group-aware) and **Jump/Load** (merge-recall), plus an **Edit** mode to change which controls a snapshot stores (green/red on the surface), the value it stores for each, and the snapshot's own one-shot MIDI output slots
 - 100% client-side: your project never leaves the browser.
 
 ## Develop
@@ -61,9 +61,6 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
 - The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
   Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
   Unknown/future codes degrade gracefully to a "Custom" raw-value field.
-- **Snapshot editing** covers a snapshot's name, pad colour, which controls it stores, and the value
-  it stores for each (Save · Edit · Jump/Load). Editing a snapshot's one-shot MIDI output slots
-  (its Program Change / Bank messages) is still on the way.
 
 ## Hosting
 
