@@ -36,9 +36,9 @@ So "copy a layer" = rewrite the first id digit. `controlId.ts` encapsulates all 
   "name": "Delay Amount",
   "colId": 8,            // colour 0–11 (see palette.ts)
   "dropOrder": 0,
-  "behavId": 1,          // physical behavior (see enums below)
+  "behavId": 1,          // physical behavior — global enum 0–12 (see Enums below)
   "feedbSlotVis": 1,
-  "feedbId": 0,          // LED style (enum unknown)
+  "feedbId": 0,          // LED ring style (see Enums below)
   "feedbSlot": 1,
   "0": { /* output slot — see below */ }
 }
@@ -57,14 +57,29 @@ message, so one knob can drive several destinations/messages.
 "0": {
   "inUse": 1,        // 1 = enabled
   "target": 0,       // index into the 8 `device` entries
-  "msgType": 3,      // 2 = Note, 3 = CC (others exist)
+  "msgType": 3,      // message type (see Enums)
   "ch": 9,           // MIDI channel, 1-based
   "csvRef": 1509949455,
-  "msgNr": 52,       // CC number (or note number for msgType 2)
-  "maxOut": 16383, "minOut": 0,   // output range (scale/invert)
-  "curveId": 0
+  "msgNr": 52,       // CC / note number (see "Value encoding" for Program+Bank's float quirk)
+  "maxOut": 16383, "minOut": 0,   // output range, stored as a 14-bit value (see "Value encoding")
+  "curveId": 0       // output curve (see Enums)
 }
 ```
+
+#### Value encoding (Min/Max, Flex, Program+Bank)
+
+`minOut`/`maxOut` are **not** the displayed values — they're stored as a 14-bit number (0–16383)
+spanning the message type's display range, so the editor scales them:
+`displayed = min + round(stored / 16383 × (max − min))`. Per type: CC / Note / Aftertouch use 0–127
+(so `16383` shows as `127`, `8256` as `64`); CC14 / NRPN are 0–16383 (1:1); Pitch bend is ±8192
+(`stored = displayed + 8192`). Helpers: `enums.storedToDisplay` / `displayToStored`.
+
+Two special cases reuse these fields:
+- **`Flex` curve** (`curveId 33`) packs its two XY points into `maxOut` (XY1) and `minOut` (XY2),
+  each as `(x << 7) | y` with `x,y` 0–127. (`enums.packXY`/`unpackXY`.)
+- **`Program Change` / `Program+Bank`** carry the program number as the slot **value** (`maxOut`,
+  0–127); `Program+Bank` additionally packs its two bank-select bytes into **`msgNr` as a float**
+  `MSB.LSB` (e.g. `5.009` = MSB 5, LSB 9). (`enums.packBank`/`unpackBank`.)
 
 ### `csvRef`
 
@@ -76,16 +91,20 @@ message, so one knob can drive several destinations/messages.
 
 ## `snp` — snapshots
 
-A snapshot is a global "scene" pad. Its entry has the same chrome fields as a control (name, colId,
-behavId 4, feedb*) plus a `data` object instead of output slots:
+A snapshot is a global "scene" pad (banks of 4 cols × 5 rows; the device exposes 20 banks). Its entry
+has the same chrome fields as a control (name, colId, behavId 4, feedb*), a `data` object holding the
+stored scene, **and** up to 8 output slots (`"0".."7"`, same shape as a control slot) that fire one-shot
+MIDI when the snapshot executes — this is where snapshot-only **Program Change / Program+Bank** messages
+live:
 
 ```jsonc
-"data": { "rotary": { "100": 0.5, ... }, "rotbut": {...}, "mute": {...}, "fader": {...} }
+"data": { "rotary": { "100": 0, ... }, "rotbut": {...}, "mute": {...}, "fader": {...} }
 ```
 
-Values are normalized 0..1 (same format as the top-level `state`). On hardware a snapshot stores **only
-the controls in the selection group used to save it** — dropedit's `saveSnapshot` currently captures
-*all* of `state` (a known simplification; making it selection-group-aware is a TODO).
+`data` holds only the controls the snapshot stores — it's the controls in the **selection group** used
+to save it, not necessarily all of them (values use the same format as the top-level `state`).
+`saveSnapshot` is selection-group-aware (stores just the group's controls); `loadSnapshot` **merges**
+(writes only the stored controls into `state`, leaving the rest — the device's "Jump" behaviour).
 
 ## `state` — live control values
 
@@ -108,25 +127,41 @@ bit 0.** `255` = all 8 columns in the group, `0` = none. See `dropProject.selGro
 `device.0..7`, each:
 `{ inUse, name, portOut, portIn, cableIdOut, cableIdIn, preDrop, ch, csvInUse, csvPath, csvFile, merge }`.
 
-A slot's `target` indexes this array. `csvPath`+`csvFile` point at a preset CSV in the `midi-main`
-database (e.g. `/midi-main/Synthstrom` + `Deluge.csv`) that supplies friendly parameter names for slots
-aimed at that device. **Ports appear 1-indexed with 0 = off** — tentative labels
-`0 Off, 1 USB1, 2 USB2, 3 TRS1, 4 TRS2, 5 TRS3, 6 TRS4` (Deluge's `portOut 3` = TRS1). Verify on hardware.
+A slot's `target` indexes this array. `portOut`/`portIn` are the MIDI port (enum below); `cableIdOut`/
+`cableIdIn` are the USB **virtual cable**, stored **0-indexed** (the device shows it 1-based, so the
+editor displays `stored + 1`). `csvPath`+`csvFile` point at a preset CSV in the `midi-main` database
+(e.g. `/midi-main/Synthstrom` + `Deluge.csv`) that supplies friendly parameter names for slots aimed at
+that device.
 
 ## Device preset CSV (`midi-main`)
 
 Columns: `manufacturer, device, section, parameter_name, …, cc_msb, …`. `dropedit` parses
-`section`, `parameter_name`, `cc_msb`, and the 0-based row index (= `csvRef` low bits). `Synthstrom/
-Deluge.csv` is bundled; others can be uploaded per device.
+`section`, `parameter_name`, `cc_msb`, and the 0-based row index (= `csvRef` low bits). The **full
+[pencilresearch/midi](https://github.com/pencilresearch/midi) collection (~393 devices) is bundled**
+(`src/data/devices/`, lazy-loaded per device; refresh via `scripts/sync-midi-db.mjs`); users can also
+upload their own CSV per device.
 
-## Observed enum values (incomplete — names unknown)
+## Enums (decoded from hardware captures — `enums.ts`)
 
-- `msgType`: 2 = Note, 3 = CC (others exist: CC14/NRPN/etc.)
-- `behavId`: rotary `1`, fader `11`, mute `4`, rotbut(push) `5` — these are the per-type defaults; the
-  full id→name map (Precision / Dynamic Pot / Toggle / Temporary / …) is unknown.
-- `feedbId`: seen `0`, `2`, `28`. `curveId`: seen `0`, `9`. Maps unknown.
+Codes are firmware-assigned and **not** in menu order; the UI shows a `code · name` dropdown with a
+`Custom…` raw-value fallback for anything unmapped. Decoded via `scripts/decode-enums.mjs`.
 
-To decode any enum: change one option on the hardware, save, and diff the JSON.
+- **`msgType`**: `2` Note On · `3` CC · `5` Pitch bend · `6` Aftertouch · `7` CC14 · `8` NRPN ·
+  `9` Program Change · `10` Program+Bank · `12` CC14 LSB first.
+- **`behavId`** (one global enum across control types): `0` Precision · `1` Dynamic Pot · `2` Dynamic
+  Fast · `3` Toggle · `4` Temporary · `5` Quick Turn · `6` Reset Left · `7` Reset Mid · `8` Reset Right ·
+  `9` Reset L/R · `10` Reset R/L · `11` One per Layer · `12` Layer A only.
+- **`feedbId`** (LED ring style, rotary turn): `0` Line from left · `1` Line from center · `2` Dot ·
+  `3..26` = "2 Steps".."25 Steps" · `27` Blank · `29` Line from right · `30` Hue Color · `31` MIDI Level ·
+  `32` MIDI Clip LED · `33..36` MIDI Col Dot / Line from left / center / right. (`28` is an unused hole —
+  it's the feedback id non-rotary elements carry.)
+- **`curveId`**: `0` Linear · `1/2` Exp-/Exp+ · `3..8` half curves · `9..13` On/Off (50/25/75/1/99) ·
+  `14..28` step curves (3..16, then 25 Steps) · `29..32` Relative 1–4 · `33` Flex · `34` Feedback Only.
+- **`portOut`/`portIn`**: `0` Off · `1` USB1 · `2` USB2 · `3` TRS1 · `4` TRS2 · `5` TRS3 · `6` TRS4
+  (verified — `portIn` shares the same enum).
+
+To decode/refresh an enum: build a capture project per `node scripts/decode-enums.mjs instructions`,
+then `decode <file.json>`. The one thing still unmapped is `csvRef`'s high 16 bits (a checksum/flags).
 
 ## Formatting (why we splice instead of regenerate)
 

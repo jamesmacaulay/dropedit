@@ -4,14 +4,24 @@ A browser-based editor for **Neuzeit Drop** project files (`.json`). Open a Drop
 click controls on a stylized hardware surface, and edit their MIDI settings in a sidebar.
 
 Features:
-- Click / shift-click / row & column / "All" selection, with multi-select **[multiple values]** editing
-- Per-control **General** (active, name, colour, behavior, LED style, value), **Output slots**
-  (up to 8, each with target device, type, CC/note, channel, range, curve), and **Selection groups**
+- Visual hardware **surface** (rotaries + push, faders, mutes) with click / shift-click multi-select,
+  row / column / "All" group selection, and **[multiple values]** editing across a mixed selection
+- **Positional multi-select copy / paste** (anchor-relative; a single copied control broadcasts to the
+  whole selection) and delete — with **⌘/Ctrl+C/V** and Backspace/Delete; switching layers keeps the
+  selection in place
+- Per-control **General** (active, name, colour, behavior, LED style, value) and **Output slots**
+  (up to 8: target device, message type, number, channel, range, curve). Enum fields (behavior, LED
+  style, curve, message type, port) are **decoded dropdowns** with a **Custom** fallback for any
+  unknown/future-firmware code; Min/Max show in the message type's range, Program Change / Program+Bank
+  and the Flex curve get tailored editors
 - Per-output-slot **parameter assignment** from a device's preset CSV (friendly names)
-- **Snapshots**: 4×5 pad grid with banks; save current values into / recall from a snapshot
-- Copy/paste a control, **copy a whole layer**, and a **Devices** editor for the 8 MIDI destinations
-- Human-readable parameter names from the Drop's device-preset CSV database (the `midi-main`
-  collection; `Synthstrom/Deluge.csv` is bundled, and you can upload your own per device)
+- **Snapshots**: 4×5 pad grid with banks; **Save** (selection-group-aware — choose name/colour/group,
+  pick which controls to include) and **Jump/Load** (merge-recall) flows
+- A **Devices** editor for the 8 MIDI destinations (ports, channel, virtual cable, preset CSV)
+- **Undo / redo** (⌘/Ctrl+Z · ⇧⌘Z), **autosave to localStorage** (restored on reload),
+  **Clean Init / DAW Init** starters, and **download** with an editable filename
+- The full **pencilresearch/midi preset database** (~393 devices) is bundled and lazy-loaded; you can
+  also upload your own CSV per device. Responsive layout for narrow/mobile viewports.
 
 100% client-side: your project never leaves the browser.
 
@@ -45,10 +55,17 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
     fader/mute `<layer><col>`. The first digit is the layer (so "copy layer" is a digit rewrite).
   - `presetDb` — parses a midi-main device CSV into parameters; `csvRef` low 16 bits = CSV row
     index (verified). See the `csvRef` note below.
-  - `dropProject` — typed read-views (controls, slots, layers, devices).
-  - `edits` — `setField`, multi-select bulk set, `assignParam` (create or edit in place),
-    create/remove control, `setChannelForLayer`, `copyLayer`, copy/paste control.
-- **`src/ui/`** — React: `Surface` (SVG hardware), `Sidebar` (per-selection editing), `App`.
+  - `dropProject` — typed read-views (controls, slots, layers, devices, selection groups).
+  - `enums` — decoded id→name maps (behavior, LED style, curve, message type, port) plus the
+    value-encoding helpers (Min/Max ↔ 14-bit scaling, Flex XY packing, Program+Bank float).
+  - `edits` — all mutations return new text: bulk field set, `assignParam`, create/remove control,
+    `copyLayer`, **positional multi copy/paste** (`copyControls`/`pasteControls`, and the snapshot
+    variants), `saveSnapshot` (selection-group-aware) / `loadSnapshot` (merge), `setGroupMember`.
+- **`src/ui/`** — React: `Surface` (SVG hardware), `Sidebar` (per-selection editing), `EnumField`
+  (dropdown + Custom fallback), `SnapshotGrid`, `DeviceEditor`, and `App` (owns the project text;
+  threads undo/redo history, localStorage autosave, and the snapshot Save/Jump-Load modes).
+- **`scripts/`** — `sync-midi-db.mjs` (refresh the bundled preset DB from a pinned commit) and
+  `decode-enums.mjs` (decode the Drop's enum/value encodings from a hardware capture).
 
 ## Known limitations / to revisit
 
@@ -56,9 +73,11 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
   low-16 row index is written). A control still works fully — its CC, channel, and display
   `name` are independent of `csvRef`; the checksum is the Drop's re-link/feedback metadata.
   Centralized in `presetDb.makeCsvRef` for a one-line upgrade once solved on hardware.
-- Friendly-name maps for `behavId` / `feedbId` / `curveId` and the device port enum aren't known,
-  so those are edited as raw numbers (the port labels USB1/USB2/TRS1–4 are a tentative guess).
-- Only `Synthstrom/Deluge.csv` is bundled so far; other devices need an uploaded CSV.
+- The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
+  Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
+  Unknown/future codes degrade gracefully to a "Custom" raw-value field.
+- **Snapshot editing** is partial: you can Save (group-aware) and Jump/Load, but editing an existing
+  snapshot's stored values / its one-shot MIDI output slots is still on the way.
 - **Not yet verified on real hardware** — load a generated project on a Drop before trusting it.
 
 ## Hosting
