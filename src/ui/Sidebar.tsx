@@ -271,11 +271,15 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     </label>
   }
   const idKey = entries.map((e) => e.id + ':' + e.slot.key).join(',')
-  const isFlex = sh('curveId') === FLEX_CURVE_ID
+  const curveId = sh('curveId')
+  const isFlex = curveId === FLEX_CURVE_ID
   // Program Change / Program+Bank: the program # IS the value (maxOut, 0-127); Program+Bank also
   // packs its two bank values into msgNr as a float. So those types get a bespoke layout.
   const isProgram = msgType !== MULTI && PROGRAM_TYPES.has(msgType as number)
   const isProgBank = msgType === 10
+  // The output value editor (range / Flex XY / program #) is laid out and scaled per the message
+  // type AND curve; with those mixed across the selection it would be meaningless, so hide it.
+  const valueUniform = msgType !== MULTI && curveId !== MULTI
   // Min/Max are stored as 14-bit; show them scaled to the message type's display range.
   const rangeNum = (labelTxt: string, field: 'minOut' | 'maxOut') => {
     const v = sh(field)
@@ -325,13 +329,15 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
           two bank values live there, edited via the Bank fields below). */}
       {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
       {num('Channel', 'ch', { min: 1, max: 16 })}
-      {isProgram
-        ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
-        : isFlex
-          ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
-          : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>)}
+      {valueUniform
+        ? (isProgram
+            ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
+            : isFlex
+              ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
+              : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
+        : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Type and Curve to edit it.</p>}
       <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
-        value={sh('curveId') === MULTI ? undefined : (sh('curveId') as number)} multi={sh('curveId') === MULTI}
+        value={curveId === MULTI ? undefined : (curveId as number)} multi={curveId === MULTI}
         onSet={(v) => set('curveId', v, true)} />
       {num('csvRef', 'csvRef')}
     </div>
