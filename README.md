@@ -1,33 +1,17 @@
 # dropedit
 
-A browser-based editor for **Neuzeit Drop** project files (`.json`). Open a Drop project,
-click controls on a stylized hardware surface, and edit their MIDI settings in a sidebar.
+A browser-based editor for **Neuzeit Drop** project files, hosted at https://jamesmacaulay.github.io/dropedit/.
 
 Features:
-- Visual hardware **surface** (rotaries + push, faders, mutes) with click / shift-click multi-select,
-  row / column / "All" group selection, and **[multiple values]** editing across a mixed selection
-- **Positional multi-select copy / paste** (anchor-relative; a single copied control broadcasts to the
-  whole selection) and delete — with **⌘/Ctrl+C/V** and Backspace/Delete; switching layers keeps the
-  selection in place
-- Per-control **General** (active, name, colour, behavior, LED style, value) and **Output slots**
-  (up to 8: target device, message type, number, channel, range, curve). Enum fields (behavior, LED
-  style, curve, message type, port) are **decoded dropdowns** with a **Custom** fallback for any
-  unknown/future-firmware code; Min/Max show in the message type's range, Program Change / Program+Bank
-  and the Flex curve get tailored editors
-- Per-output-slot **parameter assignment** from a device's preset CSV (friendly names)
-- **Snapshots**: 4×5 pad grid with banks; **Save** (selection-group-aware — choose name/colour/group,
-  pick which controls to include) and **Jump/Load** (merge-recall) flows
-- A **Devices** editor for the 8 MIDI destinations (ports, channel, virtual cable, preset CSV)
-- **Undo / redo** (⌘/Ctrl+Z · ⇧⌘Z), **autosave to localStorage** (restored on reload),
-  **Clean Init / DAW Init** starters, and **download** with an editable filename
-- The full **pencilresearch/midi preset database** (~393 devices) is bundled and lazy-loaded; you can
-  also upload your own CSV per device. Responsive layout for narrow/mobile viewports.
-
-100% client-side: your project never leaves the browser.
-
-> One workflow this enables: drive numbered Deluge tracks via the experimental MIDI-follow
-> expansion by giving each column a channel and CC parameters from the Deluge preset — no
-> per-song MIDI learns. But the editor is device-agnostic.
+- Open a Drop project `.json` file from your computer or start from a Clean Init or DAW Init template, download after editing
+- Click / shift-click / row & column / "All" selection, with multi-select batch editing of any or all controls in a layer at once
+- Copy & paste multiple selected controls within or between layers
+- Undo / redo with autosave to localStorage
+- MIDI Output Device management with included preset CSVs from [pencilresearch/midi](https://github.com/pencilresearch/midi) for human-readable parameter names
+- Per-control editing of name, value, color, behavior, LED style, MIDI output slots, and selection groups
+- Per-output-slot editing of device, MIDI channel, message type, message value (assignable with friendly param names from device preset), curve config, etc.
+- Snapshot management mirroring Drop UI: save current values into snapshot using selection groups that update as you change them, jump/load to merge snapshot's values into current state
+- 100% client-side: your project never leaves the browser.
 
 ## Develop
 
@@ -59,7 +43,7 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
   - `enums` — decoded id→name maps (behavior, LED style, curve, message type, port) plus the
     value-encoding helpers (Min/Max ↔ 14-bit scaling, Flex XY packing, Program+Bank float).
   - `edits` — all mutations return new text: bulk field set, `assignParam`, create/remove control,
-    `copyLayer`, **positional multi copy/paste** (`copyControls`/`pasteControls`, and the snapshot
+    `copyLayer`, positional multi copy/paste (`copyControls`/`pasteControls`, and the snapshot
     variants), `saveSnapshot` (selection-group-aware) / `loadSnapshot` (merge), `setGroupMember`.
 - **`src/ui/`** — React: `Surface` (SVG hardware), `Sidebar` (per-selection editing), `EnumField`
   (dropdown + Custom fallback), `SnapshotGrid`, `DeviceEditor`, and `App` (owns the project text;
