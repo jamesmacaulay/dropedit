@@ -24,13 +24,26 @@ const MOD = IS_MAC ? '⌘' : '^'
 const SHIFT_MOD = IS_MAC ? '⇧⌘' : '^⇧'
 const DEL_KEY = IS_MAC ? '⌫' : 'Del'
 
-// Last project + filename saved to localStorage, or null if none / unavailable.
-function readStored(): { text: string; name: string } | null {
-  if (typeof localStorage === 'undefined') return null
+// Storage model for multi-tab independence:
+//   sessionStorage = THIS tab's project — read exclusively on reload, so open tabs never clobber
+//                    each other's state, no matter how many you have or what order you edit them.
+//   localStorage   = the most-recently-edited project across all tabs — used only to seed a NEW tab.
+// Every edit write-throughs to both; reads prefer sessionStorage, then fall back to localStorage.
+function stores(): Storage[] {
+  const out: Storage[] = []
+  try { if (sessionStorage) out.push(sessionStorage) } catch { /* unavailable (SSR / disabled) */ }
+  try { if (localStorage) out.push(localStorage) } catch { /* unavailable */ }
+  return out
+}
+function readFrom(store: Storage): { text: string; name: string } | null {
   try {
-    const t = localStorage.getItem(STORAGE_KEY)
-    return t != null ? { text: t, name: localStorage.getItem(STORAGE_FILE) || 'project.json' } : null
+    const t = store.getItem(STORAGE_KEY)
+    return t != null ? { text: t, name: store.getItem(STORAGE_FILE) || 'project.json' } : null
   } catch { return null }
+}
+function readStored(): { text: string; name: string } | null {
+  for (const store of stores()) { const s = readFrom(store); if (s) return s } // session first, then local
+  return null
 }
 // A quick "is this actually a Drop project?" gate. Uses STRICT native JSON.parse (the span-preserving
 // parseJson is lenient and won't reject junk) plus a check for the core top-level sections.
@@ -46,15 +59,14 @@ function readValidStored(): { text: string; name: string } | null {
   return s && looksLikeDropProject(s.text) ? s : null
 }
 function persistProject(text: string, name?: string) {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, text)
-    if (name != null) localStorage.setItem(STORAGE_FILE, name)
-  } catch { /* quota / disabled storage — keep working in-memory */ }
+  for (const store of stores()) {
+    try { store.setItem(STORAGE_KEY, text); if (name != null) store.setItem(STORAGE_FILE, name) } catch { /* quota / disabled — keep working in-memory */ }
+  }
 }
 function persistFileName(name: string) {
-  if (typeof localStorage === 'undefined') return
-  try { localStorage.setItem(STORAGE_FILE, name) } catch { /* ignore */ }
+  for (const store of stores()) {
+    try { store.setItem(STORAGE_FILE, name) } catch { /* ignore */ }
+  }
 }
 
 export function App() {
@@ -371,6 +383,15 @@ export function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [text, selection, clipboard, layer, bank, snapMode, snapDraft, editSnap])
+
+  // Pin this tab's project into sessionStorage on mount, so a reload keeps THIS tab's state even
+  // if another tab has overwritten the shared localStorage copy since. (Edits already write both;
+  // this covers a freshly-opened tab that's reloaded before its first edit.)
+  useEffect(() => {
+    if (text == null) return
+    try { if (sessionStorage.getItem(STORAGE_KEY) == null) { sessionStorage.setItem(STORAGE_KEY, text); sessionStorage.setItem(STORAGE_FILE, fileName) } } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // persist any pending typed text if the tab is closed mid-burst
   useEffect(() => {

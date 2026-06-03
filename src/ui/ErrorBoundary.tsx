@@ -8,9 +8,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   static getDerivedStateFromError(error: Error) { return { error } }
 
   reset = () => {
-    try {
-      for (const k of Object.keys(localStorage)) if (k.startsWith('dropedit:')) localStorage.removeItem(k)
-    } catch { /* ignore */ }
+    for (const store of [sessionStorage, localStorage]) {
+      try { for (const k of Object.keys(store)) if (k.startsWith('dropedit:')) store.removeItem(k) } catch { /* ignore */ }
+    }
     location.reload()
   }
 
