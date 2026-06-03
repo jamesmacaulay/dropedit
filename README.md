@@ -14,7 +14,7 @@ A browser-based editor for **Neuzeit Drop** project files, hosted at https://jam
 - Snapshot management mirroring the Drop UI: **Save** (selection-group-aware) and **Jump/Load** (merge-recall), plus an **Edit** mode to change which controls a snapshot stores (green/red on the surface), the value it stores for each, and the snapshot's own one-shot MIDI output slots
 - 100% client-side: your project never leaves the browser.
 
-## Known limitations / to revisit
+## Known limitations
 
 - **`csvRef` high 16 bits** are a checksum/flags that aren't reproduced yet (only the verified
   low-16 row index is written). A control still works fully — its CC, channel, and display
