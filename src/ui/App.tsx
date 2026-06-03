@@ -280,6 +280,12 @@ export function App() {
     for (const k of selection) { const [type, id] = splitKey(k); t = removeControl(t, type, id) }
     apply(t)
   }
+  // Cut = copy the selection to the clipboard, then remove the source (one undo step via doDelete).
+  function doCut() {
+    if (!text || !canCopy) return
+    doCopy()
+    doDelete()
+  }
 
   // ---- snapshot save / load flow ----
   // In save mode, a snapshot stores the controls in the chosen selection group (green = included).
@@ -353,6 +359,7 @@ export function App() {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
       if (k === 'c' && canCopy) { e.preventDefault(); doCopy() }
+      else if (k === 'x' && canCopy) { e.preventDefault(); doCut() }
       else if (k === 'v' && canPaste) { e.preventDefault(); doPaste() }
     }
     window.addEventListener('keydown', onKey)
@@ -472,6 +479,7 @@ export function App() {
                 ) : (
                   <div className="ops">
                     <button onClick={doCopy} disabled={!canCopy}>Copy<span className="sc">{MOD}C</span></button>
+                    <button onClick={doCut} disabled={!canCopy}>Cut<span className="sc">{MOD}X</span></button>
                     <button onClick={doPaste} disabled={!canPaste}>Paste<span className="sc">{MOD}V</span></button>
                     <button onClick={doDelete} disabled={selection.length === 0}>Delete<span className="sc">{DEL_KEY}</span></button>
                     <span className="grow" />
