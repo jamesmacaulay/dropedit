@@ -62,7 +62,6 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
   Unknown/future codes degrade gracefully to a "Custom" raw-value field.
 - **Snapshot editing** is partial: you can Save (group-aware) and Jump/Load, but editing an existing
   snapshot's stored values / its one-shot MIDI output slots is still on the way.
-- **Not yet verified on real hardware** — load a generated project on a Drop before trusting it.
 
 ## Hosting
 
