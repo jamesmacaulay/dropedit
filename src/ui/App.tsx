@@ -59,6 +59,10 @@ export function App() {
   const [snpTab, setSnpTab] = useState<'snapshots' | 'banks'>('snapshots') // grid view: pads vs bank picker
   const [snapDraft, setSnapDraft] = useState<{ name: string; colId: number; group: number }>({ name: '', colId: 4 /* cyan */, group: 0 })
   const [deviceEditorOpen, setDeviceEditorOpen] = useState(false)
+  // a pending project load awaiting confirmation (shown only when the project changed since load)
+  const [pendingLoad, setPendingLoad] = useState<{ run: () => void; label: string } | null>(null)
+  // the project text as of the last load — used to detect whether changes have been made since
+  const baselineRef = useRef<string>(text ?? CLEAN_INIT)
   const [uploads, setUploads] = useState<Map<number, PresetDevice>>(new Map()) // per-device uploaded CSVs
   // remembers settings of deactivated controls within the session (the file can't store inactive ones)
   const inactiveStore = useRef<Map<string, string>>(new Map())
@@ -142,8 +146,15 @@ export function App() {
   // loading a project is a fresh start: reset the undo history to it.
   function loadInit(t: string, name: string) {
     flushPending()
-    setText(t); setFileName(name); persistProject(t, name); setSelection([]); setLayer(0)
+    setText(t); setFileName(name); persistProject(t, name); setSelection([]); setLayer(0); setSnapMode(null); setEditSnap(null)
     history.current = { stack: [t], index: 0 }; bumpHist()
+    baselineRef.current = t // the freshly-loaded project is the new baseline for "has it changed?"
+  }
+  // loading replaces everything and can't be undone, so guard it whenever the project has been
+  // changed since it was loaded. Downloading does NOT clear this — a download isn't a load.
+  function guardLoad(run: () => void, label: string) {
+    if (text != null && text !== baselineRef.current) setPendingLoad({ run, label })
+    else run()
   }
   function onUploadCsv(index: number, file: File) {
     file.text().then((t) => {
@@ -335,12 +346,12 @@ export function App() {
         <label className="btn">Open project
           <input type="file" accept=".json" hidden onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) loadProject(f)
             e.target.value = '' // allow re-selecting the same file to reload it
+            if (f) guardLoad(() => loadProject(f), f.name)
           }} />
         </label>
-        <button onClick={() => loadInit(CLEAN_INIT, 'clean-init.json')}>Clean Init</button>
-        <button onClick={() => loadInit(DAW_INIT, 'daw-init.json')}>DAW Init</button>
+        <button onClick={() => guardLoad(() => loadInit(CLEAN_INIT, 'clean-init.json'), 'Clean Init')}>Clean Init</button>
+        <button onClick={() => guardLoad(() => loadInit(DAW_INIT, 'daw-init.json'), 'DAW Init')}>DAW Init</button>
         <button onClick={save} disabled={!text}>Download</button>
         <input className="filename" value={fileName} aria-label="Project file name (used when downloading)"
           title="File name used when you download the project" spellCheck={false}
@@ -364,21 +375,29 @@ export function App() {
             <div className="board" onClick={(e) => { if (e.target === e.currentTarget) setSelection([]) }}>
               <div className="left-col">
                 <button className="devices-btn" onClick={() => setDeviceEditorOpen(true)}>Devices…</button>
-                <div className="snp-tabs">
-                  <button className={snpTab === 'snapshots' ? 'active' : ''} onClick={() => setSnpTab('snapshots')}>Snapshots</button>
-                  <button className={snpTab === 'banks' ? 'active' : ''} onClick={() => setSnpTab('banks')}>Banks</button>
-                </div>
-                {snpTab === 'snapshots' && (
-                  <div className="snp-modes">
-                    <button className={snapMode === 'save' ? 'active' : ''} onClick={() => enterMode('save')}>Save</button>
-                    <button className={snapMode === 'edit' ? 'active' : ''} onClick={() => enterMode('edit')}>Edit</button>
-                    <button className={snapMode === 'load' ? 'active' : ''} onClick={() => enterMode('load')}>Jump/Load</button>
+                {/* snp-area is a column when wide; below the breakpoint it becomes a row so the
+                    tabs/mode buttons sit to the LEFT of the grid instead of stacked above it */}
+                <div className="snp-area">
+                  <div className="snp-controls">
+                    <div className="snp-tabs">
+                      <button className={snpTab === 'snapshots' ? 'active' : ''} onClick={() => setSnpTab('snapshots')}>Snapshots</button>
+                      <button className={snpTab === 'banks' ? 'active' : ''} onClick={() => setSnpTab('banks')}>Banks</button>
+                    </div>
+                    {snpTab === 'snapshots' && (
+                      <div className="snp-modes">
+                        <button className={snapMode === 'save' ? 'active' : ''} onClick={() => enterMode('save')}>Save</button>
+                        <button className={snapMode === 'edit' ? 'active' : ''} onClick={() => enterMode('edit')}>Edit</button>
+                        <button className={snapMode === 'load' ? 'active' : ''} onClick={() => enterMode('load')}>Jump/Load</button>
+                      </div>
+                    )}
                   </div>
-                )}
-                <SnapshotGrid doc={doc} bank={bank} bankMode={snpTab === 'banks'} selected={new Set(selection)} onSelect={onSelect}
-                  onPickBank={(b) => { switchBank(b); setSnpTab('snapshots') }}
-                  onPad={snapMode ? onSnapPad : undefined} padHint={snapMode} editing={snapMode === 'edit' ? editSnap : null} />
-                {currentSnp && <SnapshotMeta text={text!} doc={doc} id={currentSnp} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} />}
+                  <div className="snp-gridwrap">
+                    <SnapshotGrid doc={doc} bank={bank} bankMode={snpTab === 'banks'} selected={new Set(selection)} onSelect={onSelect}
+                      onPickBank={(b) => { switchBank(b); setSnpTab('snapshots') }}
+                      onPad={snapMode ? onSnapPad : undefined} padHint={snapMode} editing={snapMode === 'edit' ? editSnap : null} />
+                    {currentSnp && <SnapshotMeta text={text!} doc={doc} id={currentSnp} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} />}
+                  </div>
+                </div>
               </div>
               <div className="right-col">
                 <div className="layers">
@@ -457,6 +476,19 @@ export function App() {
 
       {doc && deviceEditorOpen && (
         <DeviceEditor text={text!} doc={doc} deviceFor={deviceFor} onChange={(next, coalesce) => (coalesce ? applyLive : apply)(next)} onUploadCsv={onUploadCsv} onClose={() => setDeviceEditorOpen(false)} />
+      )}
+
+      {pendingLoad && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setPendingLoad(null) }}>
+          <div className="modal confirm">
+            <div className="modal-head"><h2>Discard unsaved changes?</h2></div>
+            <p className="hint">Loading <strong>{pendingLoad.label}</strong> replaces your current project, and this can’t be undone. Download first if you want to keep your current changes.</p>
+            <div className="confirm-actions">
+              <button onClick={() => setPendingLoad(null)}>Cancel</button>
+              <button className="danger" onClick={() => { const r = pendingLoad.run; setPendingLoad(null); r() }}>Discard &amp; load</button>
+            </div>
+          </div>
+        </div>
       )}
 
       <footer className="appfoot">

@@ -45,6 +45,11 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 /* no-wrap on desktop: the left column is fixed, the surface flexes to fill (mobile query stacks) */
 .board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: nowrap; }
 .left-col { display: flex; flex-direction: column; gap: 10px; width: var(--col-w); flex: 0 0 var(--col-w); }
+/* snapshot controls + grid: a column when wide; the mobile query turns it into a row so the
+   tabs/mode buttons sit to the left of the grid */
+.snp-area { display: flex; flex-direction: column; gap: 10px; }
+.snp-controls { display: flex; flex-direction: column; gap: 10px; }
+.snp-gridwrap { display: flex; flex-direction: column; gap: 8px; }
 .snp-modes { display: flex; gap: 6px; }
 .snp-modes button { flex: 1; }
 .snp-modes button.active { background: var(--accent); color: #222; border-color: var(--accent); }
@@ -104,6 +109,11 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
   align-items: flex-start; justify-content: center; padding: 36px 16px; z-index: 50; overflow: auto; }
 .modal { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
   padding: 16px 18px; width: 660px; max-width: 100%; }
+.modal.confirm { width: 420px; } /* the small "discard unsaved changes?" dialog */
+.modal.confirm .hint { color: var(--dim); font-size: 13px; }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+button.danger { border-color: #ef4444; color: #ef4444; }
+button.danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; }
 .modal-head h2 { margin: 0; color: var(--accent); font-size: 15px; }
 .device-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
@@ -124,6 +134,7 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
 .pad.bank.filled { border-color: var(--accent); }
 .sidebar fieldset.groups { border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px 10px; }
 .sidebar fieldset.groups legend { color: var(--accent); font-size: 11px; }
+.sidebar fieldset.groups .all-groups { border-bottom: 1px solid var(--edge); padding-bottom: 8px; margin-bottom: 8px; }
 .sidebar fieldset.groups .chk { flex-direction: row; align-items: center; gap: 6px; color: var(--txt); font-size: 12px; }
 /* cap the grid at the column width so it stays the same size when the column goes full-width
    (stacked / below breakpoint) — centered in the wider container rather than ballooning */
@@ -148,6 +159,11 @@ fieldset.device legend .chk { color: var(--txt); display: flex; align-items: cen
   .board { flex-direction: column; align-items: stretch; gap: 14px; }
   /* stacked: reset the desktop fixed width / flex so both columns span full width */
   .left-col, .right-col { width: 100%; flex: none; }
+  /* snapshot controls sit to the RIGHT of the grid, with the mode buttons stacked vertically */
+  .snp-area { flex-direction: row; align-items: flex-start; gap: 14px; }
+  .snp-gridwrap { flex: 0 0 var(--col-w); }
+  .snp-controls { flex: 0 0 var(--col-w); order: 1; }
+  .snp-modes { flex-direction: column; }
   .sidebar { width: 100%; flex: 1 1 auto; overflow: visible; }
   .sidebar .tabs { position: static; } /* the page scrolls now, so don't pin to the viewport */
   .device-grid { grid-template-columns: 1fr 1fr; } /* 4 cols is too cramped on a phone */

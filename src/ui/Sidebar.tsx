@@ -341,17 +341,31 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
 function SelectionGroups({ text, doc, targets, onChange }: { text: string; doc: JsonDoc; targets: { type: ControlType; id: string }[]; onChange: (t: string, coalesce?: boolean) => void }) {
   const editable = targets.filter((t) => t.type !== 'snp')
   if (!editable.length) return null
+  // per-group state across the selected controls: all = every control in the group, none = no control
+  const per = Array.from({ length: NUM_SEL_GROUPS }, (_, g) => {
+    const states = editable.map((t) => readGroupMember(doc, g, t.type, t.id))
+    return { all: states.every(Boolean), none: states.every((s) => !s) }
+  })
+  // "All groups" master: checked = in every group, unchecked = in none, indeterminate otherwise
+  const allGroups = per.every((p) => p.all)
+  const noGroups = per.every((p) => p.none)
+  const toggleAll = () => {
+    const include = !allGroups
+    let t = text
+    for (let g = 0; g < NUM_SEL_GROUPS; g++) t = setGroupMember(t, g, editable, include)
+    onChange(t)
+  }
   return (
     <fieldset className="groups">
       <legend>Selection groups</legend>
+      <div className="all-groups">
+        <TriCheckbox label="All groups" checked={allGroups} indeterminate={!allGroups && !noGroups} onToggle={toggleAll} />
+      </div>
       <div className="group-list">
-        {Array.from({ length: NUM_SEL_GROUPS }, (_, g) => {
-          const states = editable.map((t) => readGroupMember(doc, g, t.type, t.id))
-          const all = states.every(Boolean)
-          const none = states.every((s) => !s)
-          return <TriCheckbox key={g} label={`Group ${g + 1}`} checked={all} indeterminate={!all && !none}
-            onToggle={() => onChange(setGroupMember(text, g, editable, !all))} />
-        })}
+        {per.map((p, g) => (
+          <TriCheckbox key={g} label={`Group ${g + 1}`} checked={p.all} indeterminate={!p.all && !p.none}
+            onToggle={() => onChange(setGroupMember(text, g, editable, !p.all))} />
+        ))}
       </div>
     </fieldset>
   )
