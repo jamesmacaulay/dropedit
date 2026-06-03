@@ -2,7 +2,8 @@
 
 A browser-based editor for **Neuzeit Drop** project files, hosted at https://jamesmacaulay.github.io/dropedit/.
 
-Features:
+## Features
+
 - Import a Drop project `.json` file from your computer or start from a Clean Init or DAW Init template, download after editing
 - Click / shift-click / row & column / "All" selection, with multi-select batch editing of any or all controls in a layer at once
 - Copy & paste multiple selected controls within or between layers
@@ -12,6 +13,20 @@ Features:
 - Per-output-slot editing of device, MIDI channel, message type, message value (assignable with friendly param names from device preset), curve config, etc.
 - Snapshot management mirroring the Drop UI: **Save** (selection-group-aware) and **Jump/Load** (merge-recall), plus an **Edit** mode to change which controls a snapshot stores (green/red on the surface), the value it stores for each, and the snapshot's own one-shot MIDI output slots
 - 100% client-side: your project never leaves the browser.
+
+## Known limitations / to revisit
+
+- **`csvRef` high 16 bits** are a checksum/flags that aren't reproduced yet (only the verified
+  low-16 row index is written). A control still works fully — its CC, channel, and display
+  `name` are independent of `csvRef`; the checksum is the Drop's re-link/feedback metadata.
+  Centralized in `presetDb.makeCsvRef` for a one-line upgrade once solved on hardware.
+- The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
+  Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
+  Unknown/future codes degrade gracefully to a "Custom" raw-value field.
+- **You can save invalid data.** Some fields constrain the valid values of others. The Drop's own UI
+  enforces those invariants; dropedit doesn't enforce all of them, so you can export a project with
+  combinations the hardware wouldn't let you create. The Drop likely tolerates most gracefully, but
+  unusual values may give unusual results.
 
 ## Develop
 
@@ -51,20 +66,6 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
   project text; threads undo/redo history, localStorage autosave, and the snapshot Save/Edit/Jump-Load modes).
 - **`scripts/`** — `sync-midi-db.mjs` (refresh the bundled preset DB from a pinned commit) and
   `decode-enums.mjs` (decode the Drop's enum/value encodings from a hardware capture).
-
-## Known limitations / to revisit
-
-- **`csvRef` high 16 bits** are a checksum/flags that aren't reproduced yet (only the verified
-  low-16 row index is written). A control still works fully — its CC, channel, and display
-  `name` are independent of `csvRef`; the checksum is the Drop's re-link/feedback metadata.
-  Centralized in `presetDb.makeCsvRef` for a one-line upgrade once solved on hardware.
-- The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
-  Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
-  Unknown/future codes degrade gracefully to a "Custom" raw-value field.
-- **You can save invalid data.** Some fields constrain the valid values of others. The Drop's own UI
-  enforces those invariants; dropedit doesn't enforce all of them, so you can export a project with
-  combinations the hardware wouldn't let you create. The Drop likely tolerates most gracefully, but
-  unusual values may give unusual results.
 
 ## Hosting
 
