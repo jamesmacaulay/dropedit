@@ -8,7 +8,7 @@ import { isPositional, withLayer, withBank, controlIdsForLayer, type ControlType
 import { COLOR_NAMES } from './palette'
 import { ValidatedInput, validateName, FieldErrorContext } from './ValidatedInput'
 import { Surface, selKey, type SelectMode } from './Surface'
-import { rangeSelect } from '../model/selection'
+import { rangeSelect, rangeSelectSnapshots } from '../model/selection'
 import { serializeClip, parseClip, type ClipKind } from '../model/clipboard'
 import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
@@ -235,17 +235,29 @@ export function App() {
     document.body.appendChild(a); a.click(); a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
+  // controls and snapshots are separate selection families — a selection holds one kind, never both.
+  const kindOf = (keys: string[]): 'control' | 'snapshot' | 'mixed' | null => {
+    const snp = keys.some((k) => k.startsWith('snp:')), ctl = keys.some((k) => !k.startsWith('snp:'))
+    return snp && ctl ? 'mixed' : snp ? 'snapshot' : ctl ? 'control' : null
+  }
   function onSelect(keys: string[], mode: SelectMode) {
-    setSelection((sel) => {
-      if (mode === 'replace') return keys
-      if (mode === 'range') return rangeSelect(sel, keys)
-      // toggle: add the keys if any are missing, otherwise remove them all
-      const set = new Set(sel)
-      const allIn = keys.every((k) => set.has(k))
-      if (allIn) keys.forEach((k) => set.delete(k))
-      else keys.forEach((k) => set.add(k))
-      return Array.from(set)
-    })
+    if (mode === 'replace') { setSelection(keys); return } // plain click can switch families
+    const cur = kindOf(selection), next = kindOf(keys)
+    if (cur && next && cur !== next) {
+      // modifier-click across families: keep the current selection, just explain why nothing happened
+      setSelectionNote('Controls and snapshots are separate selections — click without a modifier to switch.')
+      return
+    }
+    if (mode === 'range') {
+      setSelection(next === 'snapshot' ? rangeSelectSnapshots(selection, keys) : rangeSelect(selection, keys))
+      return
+    }
+    // toggle: add the keys if any are missing, otherwise remove them all
+    const set = new Set(selection)
+    const allIn = keys.every((k) => set.has(k))
+    if (allIn) keys.forEach((k) => set.delete(k))
+    else keys.forEach((k) => set.add(k))
+    setSelection(Array.from(set))
   }
   // select every control on the current layer (same as the surface's "All" label / Cmd+A)
   function selectAllInLayer() {
@@ -468,6 +480,9 @@ export function App() {
 
   // the currently-focused validated field's error message (shown in the footer); null = none
   const [fieldError, setFieldError] = useState<string | null>(null)
+  // a transient selection note (e.g. "can't mix controls + snapshots"); auto-clears when selection changes
+  const [selectionNote, setSelectionNote] = useState<string | null>(null)
+  useEffect(() => { setSelectionNote(null) }, [selection])
 
   return (
     <FieldErrorContext.Provider value={setFieldError}>
@@ -654,7 +669,7 @@ export function App() {
       )}
 
       <footer className="appfoot">
-        <span className="foot-err">{fieldError}</span>
+        <span className="foot-err">{fieldError || selectionNote}</span>
         <span className="foot-info">
           Unofficial community tool, not affiliated with Neuzeit. · Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
           licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY-SA&nbsp;4.0</a>.

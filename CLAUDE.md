@@ -57,7 +57,9 @@ src/ui/      React (prop-driven; easy to render-test)
                   doc = useMemo(parseJson(text)); every edit calls a model fn and setText(newText),
                   so the view always equals what will be saved. Selection = string keys "type:id".
                   onSelect(keys, mode): replace / toggle (⌘·Ctrl-click) / range (shift-click, via
-                  model selection.rangeSelect). Copy/paste writes a tagged JSON payload to the OS
+                  model selection.rangeSelect + rangeSelectSnapshots for the pad grid). A selection
+                  holds ONE family (controls XOR snapshots) — a modifier-click across families is a
+                  no-op (footer note); a plain click switches. Copy/paste writes a tagged JSON payload to the OS
                   clipboard (clipboard.ts) so it works across tabs; falls back to an in-memory copy
                   when the clipboard can't be read (permissions / Safari).
   Surface.tsx     the Drop as inline SVG: rotaries(+push), faders, mutes; clickable row/col/All labels.

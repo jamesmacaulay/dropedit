@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rangeSelect } from '../src/model/selection'
+import { rangeSelect, rangeSelectSnapshots } from '../src/model/selection'
 
 const set = (keys: string[]) => new Set(keys)
 
@@ -52,6 +52,23 @@ describe('rangeSelect', () => {
     expect(out.has('mute:02')).toBe(true)
     expect(out.has('rotary:033')).toBe(true)
     expect(out.has('rotbut:013')).toBe(true)
+  })
+
+  it('snapshots: fills the rectangle between an anchor pad and the clicked pad (same bank)', () => {
+    // bank 00; anchor pad (col0,row0)="0000", click (col2,row1)="0021" -> box cols 0-2, rows 0-1
+    const out = set(rangeSelectSnapshots(['snp:0000'], ['snp:0021']))
+    for (const col of [0, 1, 2]) for (const row of [0, 1]) expect(out.has(`snp:00${col}${row}`)).toBe(true)
+    expect(out.has('snp:0003')).toBe(false) // row 3 outside
+    expect(out.has('snp:0030')).toBe(false) // col 3 outside
+    expect(out.size).toBe(3 * 2)
+  })
+
+  it('snapshots: only anchors on pads in the same bank, and adds the target with no anchor', () => {
+    const out = set(rangeSelectSnapshots(['snp:0100'], ['snp:0011'])) // anchor in bank 01, click in bank 00
+    expect(out.has('snp:0100')).toBe(true) // preserved
+    expect(out.has('snp:0011')).toBe(true) // added (no same-bank anchor → no box)
+    expect(out.has('snp:0000')).toBe(false)
+    expect(rangeSelectSnapshots([], ['snp:0011'])).toEqual(['snp:0011'])
   })
 
   it('produces an L-shape for a disjoint prior selection (not the filled bounding box)', () => {

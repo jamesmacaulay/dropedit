@@ -10,7 +10,7 @@
 // everything visually inside it (Option A): bands 0-3 take both the rotary and its push button, band
 // 4 the mute, band 5 the fader — matching what the row/column labels already select.
 
-import { type ControlType, parseControlId } from './controlId'
+import { type ControlType, parseControlId, snapshotPos, formatSnapshotId } from './controlId'
 
 const VROW_MUTE = 4, VROW_FADER = 5
 
@@ -58,6 +58,31 @@ export function rangeSelect(selected: string[], targets: string[]): string[] {
         for (let vrow = r0; vrow <= r1; vrow++) {
           for (const k of keysAt(layer, col, vrow)) result.add(k)
         }
+      }
+    }
+  }
+  return [...result]
+}
+
+/**
+ * Range selection within the snapshot grid (4x5 pads of the current bank) — mirrors rangeSelect: the
+ * union of the rectangles drawn from the clicked pad(s) to every already-selected pad in the same bank.
+ */
+export function rangeSelectSnapshots(selected: string[], targets: string[]): string[] {
+  const result = new Set(selected)
+  const isSnp = (k: string) => k.startsWith('snp:')
+  const posOf = (k: string) => { const id = k.slice(4); const p = snapshotPos(id); return { bank: id.slice(0, 2), col: p.col, row: p.row } }
+  const ts = targets.filter(isSnp).map(posOf)
+  if (!ts.length) { targets.forEach((t) => result.add(t)); return [...result] }
+  const bank = ts[0].bank
+  const anchors = selected.filter(isSnp).map(posOf).filter((p) => p.bank === bank)
+  if (!anchors.length) { targets.forEach((t) => result.add(t)); return [...result] }
+  for (const c of ts) {
+    for (const a of anchors) {
+      const c0 = Math.min(a.col, c.col), c1 = Math.max(a.col, c.col)
+      const r0 = Math.min(a.row, c.row), r1 = Math.max(a.row, c.row)
+      for (let col = c0; col <= c1; col++) {
+        for (let row = r0; row <= r1; row++) result.add(makeKey('snp', formatSnapshotId(Number(bank), col, row)))
       }
     }
   }

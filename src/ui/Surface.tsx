@@ -10,7 +10,7 @@ export const selKey = (type: string, id: string) => `${type}:${id}`
 export type SelectMode = 'replace' | 'toggle' | 'range'
 // cmd (mac) / ctrl (win-linux) = toggle; shift = range. On mac a ctrl-click is a context-menu, so
 // mac users use cmd — metaKey covers that; we never need to special-case it here.
-const modeOf = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): SelectMode =>
+export const modeOf = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): SelectMode =>
   e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey) ? 'toggle' : 'replace'
 
 // snapshot save / edit modes: controls tint green (included) / red (not)
