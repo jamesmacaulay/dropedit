@@ -640,7 +640,12 @@ export function App() {
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setForkWarning(false) }}>
           <div className="modal confirm">
             <div className="modal-head"><h2>Opened in another tab</h2></div>
-            <p className="hint">This project was forked from another dropedit tab that’s still open. Changes made in one tab won’t be reflected in the other. Use <strong>Clean Init</strong> or <strong>DAW Init</strong> to start fresh.</p>
+            <p className="hint">This project is forked from another dropedit tab that’s still open.</p>
+            <ul className="hint">
+              <li>Changes made in one tab won’t be reflected in the other.</li>
+              <li>You can copy and paste freely between tabs.</li>
+              <li>Use <strong>Clean Init</strong> or <strong>DAW Init</strong> to start fresh.</li>
+            </ul>
             <div className="confirm-actions">
               <button onClick={() => setForkWarning(false)}>Got it</button>
             </div>
