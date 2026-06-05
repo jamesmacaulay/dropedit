@@ -1,172 +1,221 @@
 # Neuzeit Drop project (`.json`) format
 
-Reverse-engineered from real Drop projects. This is what `dropedit` reads and writes. Treat it as the
-source of truth for the data model; the editor's job is to mutate these structures while preserving
-every untouched byte (see the "Formatting" section — it's why we use span-preserving edits, not
-`JSON.stringify`).
+The Neuzeit Drop saves each project as a single JSON file. This document describes that file's
+structure — the control mappings, snapshots, device list, and the value encodings used inside them.
 
-## Top-level keys (order preserved on disk)
+## Top-level keys
 
-`type, version, versionInstalled, state, device, map, chain, clk, grid, layers, cvOut, cvIn, remote, settings`
+A project is one JSON object. Its keys, in the order they appear on disk:
 
-`dropedit` only edits `map`, `state`, `device`, and `settings.selGroup`. Everything else round-trips
-untouched.
+| key | holds |
+|-----|-------|
+| `type` | file-type tag — always `"PROJ"` |
+| `version` | format version (the oldest firmware that can read the file) |
+| `versionInstalled` | firmware version that wrote the file |
+| `state` | each control's current value, restored on load |
+| `device` | the 8 MIDI destinations |
+| `map` | control → MIDI mappings, and snapshots |
+| `chain` | snapshot chains |
+| `clk` | clock / tempo |
+| `grid` | snapshot-grid note / DAW mode |
+| `layers` | per-layer names and the A/B button modes |
+| `cvOut` / `cvIn` | CV jack configuration |
+| `remote` | remote-control modes |
+| `settings` | project settings (including selection groups) |
 
-## `map` — control mappings, by control type
+The sections below detail `map`, `state`, `device`, and `settings.selGroup`, plus the preset-CSV format
+and the enum codes used throughout.
 
-Sections: `rotary`, `rotbut` (rotary push), `fader`, `mute`, `snp` (snapshots).
+## `map` — control mappings
 
-**Control IDs encode physical position. The first digit is the layer (0–7)** for everything except
-snapshots:
+`map` has one object per control type: `rotary`, `rotbut` (the rotary's push switch), `fader`, `mute`,
+and `snp` (snapshots). Each maps a control **id** to its configuration.
 
-| Type            | ID format                | Grid                          |
-|-----------------|--------------------------|-------------------------------|
-| `rotary`        | `<layer><col><row>` (3)  | 8 cols × 4 rows (turn)        |
-| `rotbut`        | `<layer><col><row>` (3)  | the rotary's push, same grid  |
-| `fader`         | `<layer><col>` (2)       | 8 faders                      |
-| `mute`          | `<layer><col>` (2)       | 8 mute buttons                |
-| `snp`           | `<bank:2><col><row>` (4) | **global, no layer**; 4 cols × 5 rows per bank, banks 0–99 |
+### Control ids encode physical position
 
-So "copy a layer" = rewrite the first id digit. `controlId.ts` encapsulates all of this.
+The first digit is the layer (0–7) for everything except snapshots. Columns and rows are 0-based.
+
+| type | id | grid |
+|------|----|------|
+| `rotary` | `<layer><col><row>` (3 digits) | 8 cols × 4 rows |
+| `rotbut` | `<layer><col><row>` (3 digits) | the rotary's push, same grid |
+| `fader` | `<layer><col>` (2 digits) | 8 faders |
+| `mute` | `<layer><col>` (2 digits) | 8 mute buttons |
+| `snp` | `<bank><col><row>` (bank is 2 digits, 00–19) | global, no layer; 4 cols × 5 rows per bank |
+
+Because the layer is the leading digit, the same physical control on a different layer differs only in
+that digit.
 
 ### A control entry
 
 ```jsonc
 "100": {
-  "name": "Delay Amount",
-  "colId": 8,            // colour 0–11 (see palette.ts)
-  "dropOrder": 0,
-  "behavId": 1,          // physical behavior — global enum 0–12 (see Enums below)
-  "feedbSlotVis": 1,
-  "feedbId": 0,          // LED ring style (see Enums below)
-  "feedbSlot": 1,
+  "name": "Delay Amount",   // display name
+  "colId": 8,               // colour index (0–11)
+  "dropOrder": 0,           // position in the DROP output order
+  "behavId": 1,             // physical behaviour (see Enums)
+  "feedbId": 0,             // LED ring style (see Enums)
+  "feedbSlotVis": 1,        // which output slot the LED feedback follows
+  "feedbSlot": 1,           // slot whose value drives the LED
   "0": { /* output slot — see below */ }
 }
 ```
 
-**"Active" is not a field — it is presence.** A control element is active iff its entry exists in
-`map.<type>`. dropedit's Active toggle creates (chrome-only, no slot) or removes the entry; it keeps a
-session stash so re-activating restores prior settings (hardware "remembers" too).
+A control is **active simply by being present** in its `map.<type>` object — there is no "active"
+field. An entry can exist with only the chrome fields (name/colour/…) and no output slot.
 
 ### Output slots
 
-A control can have multiple numbered output slots (`"0"`, `"1"`, … up to 8) — each an independent MIDI
-message, so one knob can drive several destinations/messages.
+A control can carry several numbered output slots (`"0"`, `"1"`, … up to 8), each an independent MIDI
+message, so one control can drive multiple destinations or message types at once.
 
 ```jsonc
 "0": {
-  "inUse": 1,        // 1 = enabled
-  "target": 0,       // index into the 8 `device` entries
-  "msgType": 3,      // message type (see Enums)
-  "ch": 9,           // MIDI channel, 1-based
-  "csvRef": 1509949455,
-  "msgNr": 52,       // CC / note number (see "Value encoding" for Program+Bank's float quirk)
-  "maxOut": 16383, "minOut": 0,   // output range, stored as a 14-bit value (see "Value encoding")
-  "curveId": 0       // output curve (see Enums)
+  "inUse": 1,            // 1 = enabled, 0 = present but off
+  "target": 0,           // index (0–7) into the `device` list
+  "msgType": 3,          // message type (see Enums)
+  "ch": 9,               // MIDI channel, 1-based
+  "msgNr": 52,           // CC / note number
+  "csvRef": 1509949455,  // preset reference (see csvRef)
+  "maxOut": 16383,       // output range, max ...
+  "minOut": 0,           //   ... and min — both 14-bit (see Value encoding)
+  "curveId": 0           // response curve (see Enums)
 }
 ```
 
 #### Value encoding (Min/Max, Flex, Program+Bank)
 
-`minOut`/`maxOut` are **not** the displayed values — they're stored as a 14-bit number (0–16383)
-spanning the message type's display range, so the editor scales them:
-`displayed = min + round(stored / 16383 × (max − min))`. Per type: CC / Note / Aftertouch use 0–127
-(so `16383` shows as `127`, `8256` as `64`); CC14 / NRPN are 0–16383 (1:1); Pitch bend is ±8192
-(`stored = displayed + 8192`). Helpers: `enums.storedToDisplay` / `displayToStored`.
+`minOut` and `maxOut` are **not** the displayed numbers. They're stored as a 14-bit value (0–16383)
+spanning the message type's display range:
 
-Two special cases reuse these fields:
-- **`Flex` curve** (`curveId 33`) packs its two XY points into `maxOut` (XY1) and `minOut` (XY2),
-  each as `(x << 7) | y` with `x,y` 0–127. (`enums.packXY`/`unpackXY`.)
-- **`Program Change` / `Program+Bank`** carry the program number as the slot **value** (`maxOut`,
-  0–127); `Program+Bank` additionally packs its two bank-select bytes into **`msgNr` as a float**
-  `MSB.LSB` (e.g. `5.009` = MSB 5, LSB 9). (`enums.packBank`/`unpackBank`.)
-
-### `csvRef`
-
-`csvRef = (checksum16 << 16) | rowIndex16`.
-- **Low 16 bits = the 0-based CSV data-row index** (header excluded) — **VERIFIED** (Amount=15, Rate=16,
-  Reverb amount=75, HPF Freq=46, Master level=57). `presetDb.makeCsvRef` writes this.
-- **High 16 bits = a checksum/flags — NOT reproduced.** A control still functions without it
-  (msgNr/ch/name are independent); it's the Drop's re-link / value-feedback metadata.
-
-## `snp` — snapshots
-
-A snapshot is a global "scene" pad (banks of 4 cols × 5 rows; the device exposes 20 banks). Its entry
-has the same chrome fields as a control (name, colId, behavId 4, feedb*), a `data` object holding the
-stored scene, **and** up to 8 output slots (`"0".."7"`, same shape as a control slot) that fire one-shot
-MIDI when the snapshot executes — this is where snapshot-only **Program Change / Program+Bank** messages
-live:
-
-```jsonc
-"data": { "rotary": { "100": 0, ... }, "rotbut": {...}, "mute": {...}, "fader": {...} }
+```
+displayed = min + round(stored / 16383 × (max − min))
 ```
 
-`data` holds only the controls the snapshot stores — it's the controls in the **selection group** used
-to save it, not necessarily all of them (values use the same format as the top-level `state`).
-`saveSnapshot` is selection-group-aware (stores just the group's controls); `loadSnapshot` **merges**
-(writes only the stored controls into `state`, leaving the rest — the device's "Jump" behaviour).
+- **CC / Note / Aftertouch** — display range 0–127 (so `16383` → `127`, `8256` → `64`).
+- **CC14 / NRPN** — 0–16383 (stored equals displayed).
+- **Pitch bend** — ±8192 (`stored = displayed + 8192`).
+
+Two cases reuse these fields:
+
+- The **Flex curve** stores two XY points instead of a min/max: `maxOut` is XY1, `minOut` is XY2, each
+  packed as `(x << 7) | y` with `x` and `y` in 0–127.
+- **Program Change / Program+Bank** put the program number in the slot value (`maxOut`, 0–127).
+  **Program+Bank** also packs its two bank-select bytes into `msgNr` as a float `MSB.LSB` — e.g.
+  `5.009` means MSB 5, LSB 9.
+
+#### `csvRef`
+
+When a slot is mapped by choosing a parameter from a device's preset CSV, `csvRef` records which CSV
+row it came from. It is **`0` when the slot wasn't assigned from a CSV** (and stays `0` if the CC is set
+by hand).
+
+When set, it packs the row index and the CC into a 32-bit integer:
+
+```
+csvRef = 0x40000000 | (cc << 23) | rowIndex
+```
+
+| bits | meaning |
+|------|---------|
+| 0–15 | the **CSV row index** — 0-based, header excluded, blank lines counted |
+| 23–29 | the **CC number** (0–127) — the same value as `msgNr` |
+| 30 | a flag bit, set whenever a CSV reference is present |
+
+`csvRef` therefore depends only on the CC and the row; renaming or otherwise editing the control
+doesn't change it. Examples: Delay/Amount (CC 52, row 15) → `0x5A00000F`; Reverb amount (CC 91,
+row 75) → `0x6D80004B`; Master level (CC 7, row 57) → `0x43800039`.
+
+### Snapshots (`map.snp`)
+
+A snapshot is a global pad that stores a "scene". Pads are arranged in banks of 4 columns × 5 rows.
+A snapshot entry has the same chrome fields as a control (`name`, `colId`, `behavId`, `feedb…`), up to
+8 output slots (`"0"`…`"7"`, identical in shape to a control slot — this is where snapshot-only
+**Program Change / Program+Bank** messages live), and a `data` object holding the stored scene:
+
+```jsonc
+"data": { "rotary": { "100": 0.5, ... }, "rotbut": {...}, "mute": {...}, "fader": {...} }
+```
+
+`data` maps control ids to stored values (same 0–1 format as `state`) and contains **only the controls
+the snapshot captured** — not necessarily every control. Recalling a snapshot writes those stored
+values into `state` and leaves the rest untouched (a merge, not a full reset).
 
 ## `state` — live control values
 
-`state.{rotary,rotbut,mute,fader}` map a control id to its current value (0..1). Editable via
-`setStateValue`. Snapshots recall into here (`loadSnapshot`).
+`state.rotary`, `state.rotbut`, `state.mute`, `state.fader` each map a control id to its current value
+in `0`–`1`. This is the position a control is restored to when the project loads; recalling a snapshot
+updates the ids it stores.
 
 ## `settings.selGroup` — selection groups
 
-8 groups (`"0".."7"`), each `{ "sgCol": <colour>, "data": [ 80 bytes ] }`.
+There are 8 selection groups (`"0"`…`"7"`), each `{ "sgCol": <colour>, "data": [ … ] }`. A selection
+group marks which controls it contains (used to choose which controls a snapshot captures).
 
-Each byte is **one row of one layer**. Per-layer layout (10 rows):
-`[rot r1, rot r2, rot r3, rot r4, rotbut r1..r4, mute, fader]`.
-So `index = layer*10 + rowKind`, where `rowKind` = row (0–3) for rotary, `4+row` for rotbut, `8` for
-mute, `9` for fader. **Within a byte, the column is a bit, MSB-first: column 1 = bit 7 … column 8 =
-bit 0.** `255` = all 8 columns in the group, `0` = none. See `dropProject.selGroupLocation` /
-`edits.setGroupMember`.
+`data` is an **80-byte bitmask**. Each byte is one row of one layer; a layer occupies 10 consecutive
+bytes in this order:
 
-## `device` — the 8 target destinations
+```
+rotary row1, rotary row2, rotary row3, rotary row4,
+rotbut row1, rotbut row2, rotbut row3, rotbut row4,
+mute, fader
+```
 
-`device.0..7`, each:
-`{ inUse, name, portOut, portIn, cableIdOut, cableIdIn, preDrop, ch, csvInUse, csvPath, csvFile, merge }`.
+So for layer `L`: `byteIndex = L*10 + rowKind`, where `rowKind` is the row (0–3) for a rotary, `4+row`
+for a rotbut, `8` for the mute row, and `9` for the fader row. **Within a byte each column is one bit,
+MSB first**: column 1 = bit 7, … column 8 = bit 0. `255` means all 8 columns, `0` means none.
+(8 layers × 10 bytes = 80.)
 
-A slot's `target` indexes this array. `portOut`/`portIn` are the MIDI port (enum below); `cableIdOut`/
-`cableIdIn` are the USB **virtual cable**, stored **0-indexed** (the device shows it 1-based, so the
-editor displays `stored + 1`). `csvPath`+`csvFile` point at a preset CSV in the `midi-main` database
-(e.g. `/midi-main/Synthstrom` + `Deluge.csv`) that supplies friendly parameter names for slots aimed at
-that device.
+## `device` — the 8 MIDI destinations
+
+`device.0` … `device.7`, each:
+
+```jsonc
+{ "inUse", "name", "portOut", "portIn", "cableIdOut", "cableIdIn",
+  "preDrop", "ch", "csvInUse", "csvPath", "csvFile", "merge" }
+```
+
+A slot's `target` is an index into this list. `portOut`/`portIn` are the MIDI port (see Enums).
+`cableIdOut`/`cableIdIn` are the USB **virtual cable**, stored **0-based** (the device's own UI shows
+it 1-based). `csvPath` + `csvFile` point at a preset CSV in the Drop's `midi-main` folder — e.g.
+`"csvPath": "/midi-main/Synthstrom"`, `"csvFile": "Deluge.csv"` — which supplies friendly parameter
+names for slots aimed at that device.
 
 ## Device preset CSV (`midi-main`)
 
-Columns: `manufacturer, device, section, parameter_name, …, cc_msb, …`. `dropedit` parses
-`section`, `parameter_name`, `cc_msb`, and the 0-based row index (= `csvRef` low bits). The **full
-[pencilresearch/midi](https://github.com/pencilresearch/midi) collection (~393 devices) is bundled**
-(`src/data/devices/`, lazy-loaded per device; refresh via `scripts/sync-midi-db.mjs`); users can also
-upload their own CSV per device.
+A device's preset CSV lives at `/midi-main/<Manufacturer>/<Device>.csv` on the Drop. Its columns
+include `manufacturer, device, section, parameter_name, …, cc_msb, …`. A parameter's **row index**
+(0-based, header excluded, blank lines counted) is what a slot's `csvRef` points at, and `cc_msb` is
+the CC that parameter maps to.
 
-## Enums (decoded from hardware captures — `enums.ts`)
+## Enums
 
-Codes are firmware-assigned and **not** in menu order; the UI shows a `code · name` dropdown with a
-`Custom…` raw-value fallback for anything unmapped. Decoded via `scripts/decode-enums.mjs`.
+These numeric codes are firmware-assigned and are **not** in menu order.
 
-- **`msgType`**: `2` Note On · `3` CC · `5` Pitch bend · `6` Aftertouch · `7` CC14 · `8` NRPN ·
+- **`msgType`** — `2` Note On · `3` CC · `5` Pitch bend · `6` Aftertouch · `7` CC14 · `8` NRPN ·
   `9` Program Change · `10` Program+Bank · `12` CC14 LSB first.
-- **`behavId`** (one global enum across control types): `0` Precision · `1` Dynamic Pot · `2` Dynamic
-  Fast · `3` Toggle · `4` Temporary · `5` Quick Turn · `6` Reset Left · `7` Reset Mid · `8` Reset Right ·
-  `9` Reset L/R · `10` Reset R/L · `11` One per Layer · `12` Layer A only.
-- **`feedbId`** (LED ring style, rotary turn): `0` Line from left · `1` Line from center · `2` Dot ·
-  `3..26` = "2 Steps".."25 Steps" · `27` Blank · `29` Line from right · `30` Hue Color · `31` MIDI Level ·
-  `32` MIDI Clip LED · `33..36` MIDI Col Dot / Line from left / center / right. (`28` is an unused hole —
-  it's the feedback id non-rotary elements carry.)
-- **`curveId`**: `0` Linear · `1/2` Exp-/Exp+ · `3..8` half curves · `9..13` On/Off (50/25/75/1/99) ·
-  `14..28` step curves (3..16, then 25 Steps) · `29..32` Relative 1–4 · `33` Flex · `34` Feedback Only.
-- **`portOut`/`portIn`**: `0` Off · `1` USB1 · `2` USB2 · `3` TRS1 · `4` TRS2 · `5` TRS3 · `6` TRS4
-  (verified — `portIn` shares the same enum).
+- **`behavId`** (one enum shared across control types) — `0` Precision · `1` Dynamic Pot ·
+  `2` Dynamic Fast · `3` Toggle · `4` Temporary · `5` Quick Turn · `6` Reset Left · `7` Reset Mid ·
+  `8` Reset Right · `9` Reset L/R · `10` Reset R/L · `11` One per Layer · `12` Layer A only.
+- **`feedbId`** (LED ring style on rotary turn) — `0` Line from left · `1` Line from center · `2` Dot ·
+  `3`–`26` "2 Steps".."25 Steps" · `27` Blank · `29` Line from right · `30` Hue Color · `31` MIDI Level ·
+  `32` MIDI Clip LED · `33`–`36` MIDI Col Dot / Line from left / center / right. (`28` is the id
+  non-rotary elements carry.)
+- **`curveId`** — `0` Linear · `1`/`2` Exp-/Exp+ · `3`–`8` half curves · `9`–`13` On/Off
+  (50/25/75/1/99) · `14`–`28` step curves (3..16, then 25 Steps) · `29`–`32` Relative 1–4 · `33` Flex ·
+  `34` Feedback Only.
+- **`portOut` / `portIn`** — `0` Off · `1` USB1 · `2` USB2 · `3` TRS1 · `4` TRS2 · `5` TRS3 · `6` TRS4.
 
-To decode/refresh an enum: build a capture project per `node scripts/decode-enums.mjs instructions`,
-then `decode <file.json>`. The one thing still unmapped is `csvRef`'s high 16 bits (a checksum/flags).
+## Formatting notes
 
-## Formatting (why we splice instead of regenerate)
+The Drop's writer formats the file in a specific way. If you edit the file in place, these quirks are
+worth preserving, because re-serializing from scratch generally won't reproduce them:
 
-Tab indentation; one attribute per line for large objects; numbers sometimes carry trailing zeros
-(`52.000`, `2.00`, `0.40932`) and sometimes don't, depending on firmware version; key order is
-meaningful-ish and inconsistent; empty objects appear as both `{}` and multiline. A regenerating
-printer can't reproduce all that, so `jsonDoc.ts` keeps source spans and only rewrites the exact
-regions you edit. The round-trip tests (`test/jsonDoc.test.ts`) assert byte-exact identity on no-op.
+- **Tab** indentation; large objects use one field per line.
+- Numbers sometimes carry trailing zeros (`52.000`, `2.00`, `0.40932`) and sometimes don't — it varies
+  by field and firmware version.
+- Key order is significant in places and inconsistent in others.
+- Empty objects appear as both `{}` and a multi-line block.
+
+The safest approach is to change only the bytes you intend to and leave everything else exactly as it
+was.
