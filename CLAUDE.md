@@ -40,6 +40,7 @@ src/model/   pure TS, fully unit-tested — the brains
                   editRemoveMember, applyEdits. Every edit is expressed as splices on the original text.
   controlId.ts    control id <-> {type,layer,col,row}; layer ops (first id digit = layer).
   selection.ts    rangeSelect: pure shift-click range selection (union-of-boxes over the visual grid).
+  clipboard.ts    serializeClip/parseClip: tagged JSON copy/paste payload (validates untrusted text).
   presetDb.ts     parse a device preset CSV -> params; makeCsvRef (low16 = CSV row index, verified).
                   deriveControlName (auto-name a control from a param, <=16 chars, category-aware).
   dropProject.ts  typed READ-views: readControl, readLayers, readDevices, readStateValue,
@@ -56,7 +57,9 @@ src/ui/      React (prop-driven; easy to render-test)
                   doc = useMemo(parseJson(text)); every edit calls a model fn and setText(newText),
                   so the view always equals what will be saved. Selection = string keys "type:id".
                   onSelect(keys, mode): replace / toggle (⌘·Ctrl-click) / range (shift-click, via
-                  model selection.rangeSelect).
+                  model selection.rangeSelect). Copy/paste writes a tagged JSON payload to the OS
+                  clipboard (clipboard.ts) so it works across tabs; falls back to an in-memory copy
+                  when the clipboard can't be read (permissions / Safari).
   Surface.tsx     the Drop as inline SVG: rotaries(+push), faders, mutes; clickable row/col/All labels.
                   Click modifiers -> SelectMode (replace / toggle / range).
   Sidebar.tsx     per-selection editor, tabs: Config (general + output slots) / Groups.

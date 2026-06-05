@@ -9,6 +9,7 @@ import { COLOR_NAMES } from './palette'
 import { ValidatedInput, validateName, FieldErrorContext } from './ValidatedInput'
 import { Surface, selKey, type SelectMode } from './Surface'
 import { rangeSelect } from '../model/selection'
+import { serializeClip, parseClip, type ClipKind } from '../model/clipboard'
 import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
 import { DeviceEditor } from './DeviceEditor'
@@ -71,6 +72,14 @@ function persistFileName(name: string) {
   }
 }
 
+// readOk distinguishes "read the clipboard but it wasn't ours" (don't paste) from "couldn't read it at
+// all" (fall back to the in-memory copy) — e.g. permission denied or no Clipboard API.
+async function readSystemClip(): Promise<{ readOk: boolean; clip: { kind: ClipKind; items: CopiedControl[] } | null }> {
+  if (!navigator.clipboard?.readText) return { readOk: false, clip: null }
+  try { return { readOk: true, clip: parseClip(await navigator.clipboard.readText()) } }
+  catch { return { readOk: false, clip: null } }
+}
+
 export function App() {
   // First load restores the saved project (if it still parses); else start from the clean-init slate.
   const [text, setText] = useState<string | null>(() => readValidStored()?.text ?? CLEAN_INIT)
@@ -89,6 +98,11 @@ export function App() {
   const [bank, setBank] = useState(0)
   const [selection, setSelection] = useState<string[]>([])
   const [clipboard, setClipboard] = useState<{ kind: 'control' | 'snapshot'; items: CopiedControl[] } | null>(null)
+  // Did the OS-clipboard WRITE of this tab's last copy succeed? Per-tab (pairs with `clipboard`). If it
+  // failed, an empty/foreign clipboard read can't be trusted, so paste falls back to the in-memory copy.
+  // A token guards against a stale write's late resolution clobbering a newer copy's result.
+  const clipWroteOk = useRef(false)
+  const clipWriteToken = useRef(0)
   // snapshot flow: 'save' shows the draft settings + group tint; 'load' recalls on pad click;
   // 'edit' picks a pad (editSnap) then edits its stored scene (membership tint + per-control values).
   const [snapMode, setSnapMode] = useState<null | 'save' | 'load' | 'edit'>(null)
@@ -281,26 +295,47 @@ export function App() {
   const hasPositional = selection.some((k) => isPositional(splitKey(k)[0]))
   const hasSnp = selection.some((k) => splitKey(k)[0] === 'snp')
   const canCopy = hasPositional || hasSnp
-  const canPaste = !!clipboard && (clipboard.kind === 'snapshot' ? hasSnp : hasPositional)
+  // we can't synchronously know the OS clipboard's contents, so Paste is enabled whenever there's a
+  // destination selection; doPaste reads the clipboard and no-ops if it isn't ours / kind-mismatched.
+  const canPaste = hasPositional || hasSnp
   void histVer // re-render trigger: the history stack lives in a ref, so read it after each bump
   const canUndo = history.current.index > 0
   const canRedo = history.current.index < history.current.stack.length - 1
+  // keep an in-memory copy (fallback when the clipboard can't be read) AND write JSON to the OS
+  // clipboard so it can be pasted in another tab.
+  function stashClip(kind: ClipKind, items: CopiedControl[]) {
+    setClipboard({ kind, items })
+    const token = ++clipWriteToken.current
+    clipWroteOk.current = false // until the write is confirmed; only this copy's own result may flip it
+    try {
+      navigator.clipboard?.writeText(serializeClip(kind, items))
+        ?.then(() => { if (clipWriteToken.current === token) clipWroteOk.current = true })
+        ?.catch(() => { /* leave false -> paste will trust the in-memory copy */ })
+    } catch { /* no Clipboard API: leave false */ }
+  }
   function doCopy() {
     if (!text) return
     // snapshots and controls are separate families; copy whichever the selection is.
     if (hasSnp && !hasPositional) {
       const items = copySnapshots(text, selControls())
-      if (items.some((c) => c.valueText != null)) setClipboard({ kind: 'snapshot', items })
+      if (items.some((c) => c.valueText != null)) stashClip('snapshot', items)
     } else if (hasPositional) {
       const items = copyControls(text, selControls())
-      if (items.some((c) => c.valueText != null)) setClipboard({ kind: 'control', items })
+      if (items.some((c) => c.valueText != null)) stashClip('control', items)
     }
   }
-  function doPaste() {
+  async function doPaste() {
     if (!text || !canPaste) return
-    apply(clipboard!.kind === 'snapshot'
-      ? pasteSnapshots(text, clipboard!.items, selControls(), bank)
-      : pasteControls(text, clipboard!.items, selControls(), layer))
+    const { readOk, clip: sys } = await readSystemClip()
+    // Prefer the OS clipboard (this is what makes cross-tab paste work). If it doesn't hold our payload,
+    // only trust that "empty/foreign" verdict when we could read it AND our own last write succeeded;
+    // otherwise (couldn't read, or our write failed) fall back to this tab's in-memory copy.
+    const clip = sys ?? ((readOk && clipWroteOk.current) ? null : clipboard)
+    if (!clip) return
+    if (clip.kind === 'snapshot' ? !hasSnp : !hasPositional) return // family must match the destination
+    apply(clip.kind === 'snapshot'
+      ? pasteSnapshots(text, clip.items, selControls(), bank)
+      : pasteControls(text, clip.items, selControls(), layer))
   }
   function doDelete() {
     if (!text || selection.length === 0) return
