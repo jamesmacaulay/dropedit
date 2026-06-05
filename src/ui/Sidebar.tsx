@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { type JsonDoc } from '../model/jsonDoc'
+import { type JsonDoc, parseJson } from '../model/jsonDoc'
 import {
   readControl, readStateValue, readDevices, readGroupMember, readSnapshotMember, readSnapshotValue, NUM_SEL_GROUPS,
   type ControlView, type SlotView, type DeviceView,
 } from '../model/dropProject'
 import type { ControlType } from '../model/controlId'
 import type { PresetDevice } from '../model/presetDb'
-import { paramLabel } from '../model/presetDb'
+import { paramLabel, deriveControlName } from '../model/presetDb'
 import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
   PROGRAM_TYPES, unpackBank, packBank,
 } from '../model/enums'
 import { EnumField } from './EnumField'
+import { ValidatedInput, validateName, validateInt, validateNum } from './ValidatedInput'
 import { COLOR_NAMES } from './palette'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
@@ -126,10 +127,10 @@ function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
         ? <p className="hint">Not stored. Check the box (or press <strong>S</strong>) to add — it captures the control’s current live value.</p>
         : (<>
             {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
-            <label>Stored value (0–1)<input type="number" step={0.001} min={0} max={1}
-              value={valueShared === MULTI || valueShared === undefined ? '' : (valueShared as number)}
+            <label>Stored value (0–1)<ValidatedInput inputMode="decimal"
+              value={valueShared === MULTI || valueShared === undefined ? '' : String(valueShared)}
               placeholder={valueShared === MULTI ? '[multiple]' : ''}
-              onChange={(e) => e.target.value !== '' && onValue(Number(e.target.value))} /></label>
+              validate={validateNum('Stored value', 0, 1)} onCommit={(raw) => onValue(Number(raw))} /></label>
           </>)}
     </aside>
   )
@@ -137,7 +138,7 @@ function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
 
 // ---------------- controls ----------------
 function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange, onSetActive }: SidebarProps) {
-  const [tab, setTab] = useState<'general' | 'slots' | 'groups'>('general')
+  const [tab, setTab] = useState<'config' | 'groups'>('config')
   const targets: Target[] = selection.map(parseKey).filter((t) => t.type !== 'snp')
     .map((t) => ({ type: t.type, id: t.id, view: readControl(doc, t.type, t.id) }))
   if (!targets.length) return <aside className="sidebar"><p className="hint">Nothing editable selected.</p></aside>
@@ -165,38 +166,38 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
     <aside className="sidebar">
       <h2>{single ? `${single.type} ${single.id}` : `${targets.length} controls`}</h2>
       <div className="tabs">
-        <button className={tab === 'general' ? 'active' : ''} onClick={() => setTab('general')}>General</button>
-        <button className={tab === 'slots' ? 'active' : ''} onClick={() => setTab('slots')}>Output slots</button>
+        <button className={tab === 'config' ? 'active' : ''} onClick={() => setTab('config')}>Config</button>
         <button className={tab === 'groups' ? 'active' : ''} onClick={() => setTab('groups')}>Groups</button>
       </div>
 
       <div className="tab-body">
-        {tab === 'general' && (
+        {tab === 'config' && (
           <>
             <TriCheckbox label="Active" checked={allActive} indeterminate={someActive && !allActive} onToggle={() => onSetActive(fieldTargets, !allActive)} />
             {!someActive && <p className="hint">Inactive — turn Active on to configure it (it’ll remember prior settings this session).</p>}
             {someActive && (
-              <>
-                <label>Name<input type="text" value={name === MULTI ? '' : (name as string ?? '')} placeholder={name === MULTI ? '[multiple values]' : ''} onChange={(e) => onName(e.target.value)} /></label>
-                <label>Color
-                  <select value={colId === MULTI || colId === undefined ? '' : String(colId)} onChange={(e) => e.target.value !== '' && onColor(Number(e.target.value))}>
-                    {(colId === MULTI || colId === undefined) && <option value="">{colId === MULTI ? '[multiple]' : '— none —'}</option>}
-                    {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
-                  </select>
-                </label>
+              // Name spans the full width; then a [Value | Behavior] row and a [Color | LED style] row.
+              <div className="field-grid">
+                <label className="field-span">Name<ValidatedInput value={name === MULTI ? '' : (name as string ?? '')} placeholder={name === MULTI ? '[multiple values]' : ''} allowEmpty validate={validateName('Name')} onCommit={(raw) => onName(raw)} /></label>
+                <label>Value<ValidatedInput inputMode="decimal" value={stateVal === MULTI || stateVal === undefined ? '' : String(stateVal)} placeholder={stateVal === MULTI ? '[multiple]' : 'unset'} validate={validateNum('Value', 0, 1)} onCommit={(raw) => onStateVal(Number(raw))} /></label>
                 <EnumField key={`behav-${selection.join('|')}`} label="Behavior" map={BEHAV}
                   value={behavId === MULTI || behavId === undefined ? undefined : (behavId as number)} multi={behavId === MULTI}
                   onSet={(v) => onField('behavId', v)} />
+                <label>Color
+                  <select value={colId === MULTI || colId === undefined ? '' : String(colId)} onChange={(e) => e.target.value !== '' && onColor(Number(e.target.value))}>
+                    {(colId === MULTI || colId === undefined) && <option value="">{colId === MULTI ? '[multiple]' : '— none —'}</option>}
+                    {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>[{i}] {nm}</option>)}
+                  </select>
+                </label>
                 <EnumField key={`feedb-${selection.join('|')}`} label="LED style" map={FEEDB}
                   value={feedbId === MULTI || feedbId === undefined ? undefined : (feedbId as number)} multi={feedbId === MULTI}
                   onSet={(v) => onField('feedbId', v)} />
-                <label>Current value (state)<input type="number" step={0.001} value={stateVal === MULTI || stateVal === undefined ? '' : (stateVal as number)} placeholder={stateVal === MULTI ? '[multiple]' : 'unset'} onChange={(e) => e.target.value !== '' && onStateVal(Number(e.target.value))} /></label>
-              </>
+              </div>
             )}
+            <h3 className="section">Output slots</h3>
+            <SlotList text={text} targets={targets} deviceFor={deviceFor} devices={devices} defaultColId={defaultColId} onChange={onChange} />
           </>
         )}
-
-        {tab === 'slots' && <SlotList text={text} targets={targets} deviceFor={deviceFor} devices={devices} defaultColId={defaultColId} onChange={onChange} />}
 
         {tab === 'groups' && <SelectionGroups text={text} doc={doc} targets={fieldTargets} onChange={onChange} />}
       </div>
@@ -252,16 +253,33 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     const f = slots[0][k]; return slots.every((s) => s[k] === f) ? f : MULTI
   }
   const set = (f: keyof SlotView, v: number, coalesce = false) => { let t = text; for (const e of entries) t = setSlotField(t, e.type, e.id, e.slot.key, f as string, v); onChange(t, coalesce) }
-  const setParam = (rowIndex: number) => { const p = device?.byRowIndex.get(rowIndex); if (!p) return; let t = text; for (const e of entries) t = setSlotParam(t, e.type, e.id, e.slot.key, p); onChange(t) }
+  const setParam = (rowIndex: number) => {
+    const p = device?.byRowIndex.get(rowIndex); if (!p) return
+    const derived = deriveControlName(p.section, p.name)
+    const d = parseJson(text)
+    let t = text
+    for (const e of entries) {
+      // refresh the control's name from the new param when it was auto-named and untouched: i.e. it's
+      // blank, OR it still equals the name we'd derive from the slot's *current* param (so picking a
+      // few params in a row keeps updating, but a name the user actually typed is left alone).
+      const curName = (readControl(d, e.type, e.id)?.name ?? '').trim()
+      const cur = e.slot.msgType === 3 ? device?.byRowIndex.get(e.slot.csvRef & 0xffff) : undefined
+      const autoNamed = cur != null && cur.cc === e.slot.msgNr && curName === deriveControlName(cur.section, cur.name)
+      t = setSlotParam(t, e.type, e.id, e.slot.key, p)
+      if (curName === '' || autoNamed) t = setControlField(t, e.type, e.id, 'name', derived)
+    }
+    onChange(t)
+  }
 
   // reflect the shared current param (csvRef low-16 = row, confirmed by cc)
   const paramOf = (s: SlotView) => { const ri = s.csvRef & 0xffff; const cur = device?.byRowIndex.get(ri); return device && cur && s.msgType === 3 && cur.cc === s.msgNr ? ri : null }
   const paramShared = slots.every((s) => paramOf(s) === paramOf(slots[0])) ? paramOf(slots[0]) : null
   const msgType = sh('msgType')
 
-  const num = (labelTxt: string, field: keyof SlotView, extra: Record<string, number> = {}) => {
+  const num = (labelTxt: string, field: keyof SlotView, range?: { min: number; max: number }) => {
     const v = sh(field)
-    return <label>{labelTxt}<input type="number" {...extra} value={v === MULTI ? '' : (v as number)} placeholder={v === MULTI ? '[multiple]' : ''} onChange={(e) => e.target.value !== '' && set(field, Number(e.target.value), true)} /></label>
+    return <label>{labelTxt}<ValidatedInput inputMode="numeric" value={v === MULTI ? '' : String(v)} placeholder={v === MULTI ? '[multiple]' : ''}
+      validate={range ? validateInt(labelTxt, range.min, range.max) : validateInt(labelTxt)} onCommit={(raw) => set(field, Number(raw), true)} /></label>
   }
   const sel = (labelTxt: string, field: keyof SlotView, options: ReactNode) => {
     const v = sh(field)
@@ -286,9 +304,10 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   const rangeNum = (labelTxt: string, field: 'minOut' | 'maxOut') => {
     const v = sh(field)
     const r = msgType === MULTI ? null : slotRange(msgType as number)
-    const disp = v === MULTI ? '' : (r ? storedToDisplay(v as number, msgType as number) : (v as number))
-    return <label>{labelTxt}<input type="number" min={r?.min} max={r?.max} value={v === MULTI ? '' : disp} placeholder={v === MULTI ? '[multiple]' : ''}
-      onChange={(e) => e.target.value !== '' && set(field, r ? displayToStored(Number(e.target.value), msgType as number) : Number(e.target.value), true)} /></label>
+    const disp = v === MULTI ? '' : String(r ? storedToDisplay(v as number, msgType as number) : (v as number))
+    return <label>{labelTxt}<ValidatedInput inputMode="numeric" value={disp} placeholder={v === MULTI ? '[multiple]' : ''}
+      validate={validateInt(labelTxt, r?.min ?? 0, r?.max ?? 16383)}
+      onCommit={(raw) => set(field, r ? displayToStored(Number(raw), msgType as number) : Number(raw), true)} /></label>
   }
   // Flex curve packs its two points into maxOut (XY1) / minOut (XY2) as (x<<7)|y, x,y in 0-127.
   const xyPoint = (labelTxt: string, field: 'minOut' | 'maxOut') => {
@@ -297,8 +316,8 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     const xy = multi ? { x: 0, y: 0 } : unpackXY(v as number)
     return <label>{labelTxt}
       <span className="xy-pair">
-        <input type="number" min={0} max={127} placeholder="x" value={multi ? '' : xy.x} onChange={(e) => e.target.value !== '' && set(field, packXY(Number(e.target.value), xy.y), true)} />
-        <input type="number" min={0} max={127} placeholder="y" value={multi ? '' : xy.y} onChange={(e) => e.target.value !== '' && set(field, packXY(xy.x, Number(e.target.value)), true)} />
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="x" value={multi ? '' : String(xy.x)} validate={validateInt('X', 0, 127)} onCommit={(raw) => set(field, packXY(Number(raw), xy.y), true)} /></span>
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="y" value={multi ? '' : String(xy.y)} validate={validateInt('Y', 0, 127)} onCommit={(raw) => set(field, packXY(xy.x, Number(raw)), true)} /></span>
       </span>
     </label>
   }
@@ -309,38 +328,43 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     const { msb, lsb } = multi ? { msb: 0, lsb: 0 } : unpackBank(v as number)
     return <label>Bank (MSB · LSB)
       <span className="xy-pair">
-        <input type="number" min={0} max={127} placeholder="MSB" value={multi ? '' : msb} onChange={(e) => e.target.value !== '' && set('msgNr', packBank(Number(e.target.value), lsb), true)} />
-        <input type="number" min={0} max={127} placeholder="LSB" value={multi ? '' : lsb} onChange={(e) => e.target.value !== '' && set('msgNr', packBank(msb, Number(e.target.value)), true)} />
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="MSB" value={multi ? '' : String(msb)} validate={validateInt('MSB', 0, 127)} onCommit={(raw) => set('msgNr', packBank(Number(raw), lsb), true)} /></span>
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="LSB" value={multi ? '' : String(lsb)} validate={validateInt('LSB', 0, 127)} onCommit={(raw) => set('msgNr', packBank(msb, Number(raw)), true)} /></span>
       </span>
     </label>
   }
 
+  // friendly param picker — fills msgType + CC + csvRef from the target device's CSV
+  const paramPicker = (
+    <label>Parameter {device ? `(${device.device})` : '(no CSV)'}
+      <select value={paramShared != null ? String(paramShared) : ''} disabled={!device} onChange={(e) => e.target.value !== '' && setParam(Number(e.target.value))}>
+        <option value="">{slots.length > 1 && paramShared == null ? '[multiple values]' : '— pick a parameter —'}</option>
+        {device && paramOptions(device)}
+      </select>
+    </label>
+  )
+
   return (
     <div className="slot-fields">
-      <label>Parameter {device ? `(${device.device})` : '(no CSV)'}
-        <select value={paramShared != null ? String(paramShared) : ''} disabled={!device} onChange={(e) => e.target.value !== '' && setParam(Number(e.target.value))}>
-          <option value="">{slots.length > 1 && paramShared == null ? '[multiple values]' : '— pick a parameter —'}</option>
-          {device && paramOptions(device)}
-        </select>
-      </label>
       {sel('Target device', 'target', devices.map((d) => <option key={d.index} value={d.index}>{d.index}: {d.name || '—'}</option>))}
-      <EnumField key={`type-${idKey}`} label="Type" map={MSG_TYPE}
+      {num('Channel', 'ch', { min: 1, max: 16 })}
+      <EnumField key={`type-${idKey}`} label="Message Type" map={MSG_TYPE}
         value={msgType === MULTI ? undefined : (msgType as number)} multi={msgType === MULTI}
         onSet={(v) => set('msgType', v)} />
+      {paramPicker}
       {/* msgNr is the note/CC number for normal types; for program types it's hidden (Program+Bank's
           two bank values live there, edited via the Bank fields below). */}
       {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
-      {num('Channel', 'ch', { min: 1, max: 16 })}
+      <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
+        value={curveId === MULTI ? undefined : (curveId as number)} multi={curveId === MULTI}
+        onSet={(v) => set('curveId', v, true)} />
       {valueUniform
         ? (isProgram
             ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
             : isFlex
               ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
               : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
-        : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Type and Curve to edit it.</p>}
-      <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
-        value={curveId === MULTI ? undefined : (curveId as number)} multi={curveId === MULTI}
-        onSet={(v) => set('curveId', v, true)} />
+        : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Message Type and Curve to edit it.</p>}
       {num('csvRef', 'csvRef')}
     </div>
   )

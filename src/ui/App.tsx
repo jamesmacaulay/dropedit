@@ -6,6 +6,7 @@ import { loadBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
 import { isPositional, withLayer, withBank, controlIdsForLayer, type ControlType } from '../model/controlId'
 import { COLOR_NAMES } from './palette'
+import { ValidatedInput, validateName, FieldErrorContext } from './ValidatedInput'
 import { Surface, selKey } from './Surface'
 import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
@@ -427,7 +428,11 @@ export function App() {
     return () => window.removeEventListener('beforeunload', flush)
   }, [])
 
+  // the currently-focused validated field's error message (shown in the footer); null = none
+  const [fieldError, setFieldError] = useState<string | null>(null)
+
   return (
+    <FieldErrorContext.Provider value={setFieldError}>
     <div className="app">
       <header className="topbar">
         <strong>dropedit</strong>
@@ -548,10 +553,10 @@ export function App() {
             <aside className="sidebar">
               <h2>Save snapshot</h2>
               <p className="hint">Set the details, choose which controls to include (green), then click a pad to save into it.</p>
-              <label>Name<input type="text" value={snapDraft.name} placeholder="(optional)" onChange={(e) => setSnapDraft((d) => ({ ...d, name: e.target.value }))} /></label>
+              <label>Name<ValidatedInput value={snapDraft.name} placeholder="(optional)" allowEmpty validate={validateName('Name')} onCommit={(raw) => setSnapDraft((d) => ({ ...d, name: raw }))} /></label>
               <label>Pad color
                 <select value={String(snapDraft.colId)} onChange={(e) => setSnapDraft((d) => ({ ...d, colId: Number(e.target.value) }))}>
-                  {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
+                  {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>[{i}] {nm}</option>)}
                 </select>
               </label>
               <label>Selection group
@@ -606,10 +611,14 @@ export function App() {
       )}
 
       <footer className="appfoot">
-        Unofficial community tool, not affiliated with Neuzeit. · Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
-        licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY-SA&nbsp;4.0</a>.
+        <span className="foot-err">{fieldError}</span>
+        <span className="foot-info">
+          Unofficial community tool, not affiliated with Neuzeit. · Device presets from <a href="https://github.com/pencilresearch/midi" target="_blank" rel="noopener noreferrer">pencilresearch/midi</a>,
+          licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY-SA&nbsp;4.0</a>.
+        </span>
       </footer>
     </div>
+    </FieldErrorContext.Provider>
   )
 }
 

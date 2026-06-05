@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ValidatedInput, validateInt } from './ValidatedInput'
 
 // A labelled dropdown for a Drop enum field (behavior / LED style / curve / port) that stays
 // robust to firmware adding options we don't have labels for:
@@ -27,13 +28,13 @@ export function EnumField({ label, value, multi, map, onSet }: {
       }}>
         {(multi || value === undefined) && <option value="">{multi ? '[multiple]' : '—'}</option>}
         {Object.keys(map).map(Number).sort((a, b) => a - b).map((c) => (
-          <option key={c} value={c}>{c} · {map[c]}</option>
+          <option key={c} value={c}>[{c}] {map[c]}</option>
         ))}
         <option value="__custom__">Custom…</option>
       </select>
       {showInput && (
-        <input type="number" value={value ?? ''} placeholder={multi ? '[multiple]' : 'raw value'} autoFocus={custom}
-          onChange={(e) => e.target.value !== '' && onSet(Number(e.target.value))} />
+        <ValidatedInput inputMode="numeric" value={value === undefined ? '' : String(value)} placeholder={multi ? '[multiple]' : 'raw value'}
+          autoFocus={custom} validate={validateInt(label)} onCommit={(raw) => onSet(Number(raw))} />
       )}
     </label>
   )

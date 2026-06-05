@@ -3,6 +3,7 @@ import type { JsonDoc } from '../model/jsonDoc'
 import { readControl } from '../model/dropProject'
 import { setControlField } from '../model/edits'
 import { colorFor, COLOR_NAMES } from './palette'
+import { ValidatedInput, validateName } from './ValidatedInput'
 import { selKey } from './Surface'
 
 // Snapshot pads: 4 columns x 5 rows = 20 snapshots per bank. Snapshots are GLOBAL
@@ -72,10 +73,10 @@ export function SnapshotMeta({ text, doc, id, onChange }: { text: string; doc: J
   if (!view) return <p className="snp-meta-empty">Empty pad {id} — use <strong>Save</strong> to capture values here.</p>
   return (
     <div className="snp-meta">
-      <label>Name<input type="text" value={view.name} onChange={(e) => onChange(setControlField(text, 'snp', id, 'name', e.target.value), true)} /></label>
+      <label>Name<ValidatedInput value={view.name} allowEmpty validate={validateName('Name')} onCommit={(raw) => onChange(setControlField(text, 'snp', id, 'name', raw), true)} /></label>
       <label>Pad color
         <select value={String(view.colId)} onChange={(e) => onChange(setControlField(text, 'snp', id, 'colId', Number(e.target.value)))}>
-          {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>{i} · {nm}</option>)}
+          {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>[{i}] {nm}</option>)}
         </select>
       </label>
     </div>

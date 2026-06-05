@@ -79,6 +79,41 @@ export function paramLabel(p: PresetParam): string {
   return p.section ? `${p.section} / ${p.name}` : p.name
 }
 
+// Derive a Drop control name (<=16 chars) from a preset param's category + name, fitting as much
+// of each as possible. Drop caps any name at 16 chars. We progressively condense: truncate each
+// word to 3 chars (`shorten`), then keep only first+last word (`extraShorten`), trying the
+// least-aggressive combination that fits. The final fallback (both extra-shortened) is at most
+// "xxx xxx xxx xxx" = 15 chars, so the result is always <=16.
+const shortenedWords = (s: string): string[] => s.split(' ').filter((w) => w !== '').map((w) => w.slice(0, 3))
+const shorten = (s: string): string => shortenedWords(s).join(' ')
+const extraShorten = (s: string): string => {
+  const w = shortenedWords(s)
+  return w.length <= 1 ? (w[0] ?? '') : `${w[0]} ${w[w.length - 1]}`
+}
+// join with a single space, dropping empty parts (e.g. params with no category)
+const joinName = (a: string, b: string): string => [a, b].filter((s) => s !== '').join(' ')
+
+export function deriveControlName(category: string, name: string): string {
+  let cat = category.trim()
+  const param = name.trim()
+  // if the category just repeats the start of the param name ("Reverb" + "Reverb amount"), drop it
+  // and fit the param name alone — avoids silly doubled results like "Rev Rev amo".
+  const lcat = cat.toLowerCase(), lparam = param.toLowerCase()
+  if (cat !== '' && (lparam === lcat || lparam.startsWith(lcat + ' '))) cat = ''
+  const candidates: string[] = []
+  // a long category should never hog the budget at the param name's expense — once it's >=8 chars,
+  // always condense it at least with `shorten` (never use the whole thing).
+  if (cat.length < 8) candidates.push(joinName(cat, param))
+  candidates.push(
+    joinName(shorten(cat), param),
+    joinName(shorten(cat), shorten(param)),
+    joinName(extraShorten(cat), param),
+    joinName(extraShorten(cat), shorten(param)),
+  )
+  for (const c of candidates) if (c.length <= 16) return c
+  return joinName(extraShorten(cat), extraShorten(param))
+}
+
 // csvRef encoding.
 //   VERIFIED: low 16 bits = rowIndex (Amount=15, Rate=16, Reverb amount=75,
 //   HPF Freq=46, Master level=57 — exact against the real project).

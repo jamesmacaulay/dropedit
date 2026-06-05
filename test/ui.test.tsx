@@ -45,13 +45,13 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('AMOUNT') // a control name label
   })
 
-  it('Sidebar single selection: general tab + tab bar', async () => {
+  it('Sidebar single selection: config tab + tab bar', async () => {
     const doc = parseJson(EXP)
     const device = (await loadBundled('synthstrom-deluge'))!
     const html = renderToString(<Sidebar text={EXP} doc={doc} deviceFor={() => device} selection={['rotary:000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
-    expect(html).toContain('AMOUNT') // general tab: control name
-    expect(html).toContain('General')
-    expect(html).toContain('Output slots')
+    expect(html).toContain('AMOUNT') // config tab: control name
+    expect(html).toContain('Config') // merged General + Output slots tab
+    expect(html).toContain('Output slots') // the slots section heading within Config
     expect(html).toContain('Groups')
     // Behavior is now a decoded dropdown (behavId 1 = Dynamic Pot) with a Custom fallback
     expect(html).toContain('Dynamic Pot')

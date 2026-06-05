@@ -24,10 +24,16 @@ body { margin: 0; background: var(--bg); color: var(--txt);
 button, .btn, select, input[type=text], input[type=number] {
   font: inherit; background: #262630; color: var(--txt); border: 1px solid var(--edge);
   border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+/* Chrome enforces an intrinsic select height (ignoring line-height), so pin selects and text inputs
+   to the same explicit height to keep side-by-side fields aligned */
+select, input[type=text], input[type=number] { height: 30px; }
 button:hover, .btn:hover { border-color: var(--accent); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 label { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); }
 label input, label select { color: var(--txt); }
+
+/* validated inputs: red border while invalid; the message itself shows in the footer (focused only) */
+input.invalid { border-color: #ff6b6b !important; }
 
 /* dismissible notices below the topbar (first-run welcome, import errors) */
 .notice { display: flex; align-items: center; gap: 12px; padding: 9px 16px; font-size: 13px;
@@ -48,8 +54,11 @@ label input, label select { color: var(--txt); }
 .crash-detail { margin-top: 24px; font-family: ui-monospace, monospace; font-size: 11px; color: #6a6f79;
   word-break: break-word; }
 .empty { padding: 60px; text-align: center; color: var(--dim); }
-.appfoot { flex: none; padding: 5px 16px; text-align: right; font-size: 11px; color: var(--dim);
-  background: var(--panel); border-top: 1px solid var(--edge); }
+.appfoot { flex: none; padding: 5px 16px; font-size: 11px; color: var(--dim);
+  background: var(--panel); border-top: 1px solid var(--edge);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.appfoot .foot-err { color: #ff7b7b; flex: 1 1 auto; min-width: 0; }
+.appfoot .foot-info { flex: none; text-align: right; }
 .appfoot a { color: var(--dim); text-decoration: underline; }
 .appfoot a:hover { color: var(--accent); }
 code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--accent); }
@@ -104,6 +113,13 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sidebar .tabs button { flex: 1; padding: 5px 4px; font-size: 12px; }
 .sidebar .tabs button.active { background: var(--accent); color: #222; border-color: var(--accent); }
 .sidebar .tab-body { display: flex; flex-direction: column; gap: 10px; }
+/* general config in two side-by-side columns; some fields (LED style) span the full width */
+.sidebar .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; align-items: start; }
+.sidebar .field-grid label { width: 100%; }
+.sidebar .field-grid .field-span { grid-column: 1 / -1; }
+/* "Output slots" divider inside the merged Config tab */
+.sidebar h3.section { margin: 2px 0 0; padding-top: 9px; border-top: 1px solid var(--edge);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--dim); }
 .sidebar .group-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
 .sidebar .group-list .chk { display: flex; flex-direction: row; align-items: center; gap: 6px;
   white-space: nowrap; color: var(--txt); font-size: 12px; }
@@ -122,7 +138,7 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sidebar fieldset.slot legend .chk { color: var(--txt); flex-direction: row; align-items: center; }
 .sidebar .slot-fields { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .sidebar .xy-pair { display: flex; gap: 6px; }
-.sidebar .xy-pair input { width: 50%; }
+.sidebar .xy-pair .xy-cell { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .snp-actions { display: flex; gap: 8px; }
 .snp-actions button { flex: 1; }
 

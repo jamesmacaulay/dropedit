@@ -5,6 +5,7 @@ import { setDeviceField, setDeviceCsv } from '../model/edits'
 import { PORT } from '../model/enums'
 import { BUNDLED_DEVICES, type BundledDevice } from '../data/devices'
 import { EnumField } from './EnumField'
+import { ValidatedInput, validateName, validateInt } from './ValidatedInput'
 
 // bundled devices grouped by manufacturer for the (now ~400-entry) preset dropdown
 const BUNDLED_GROUPS: [string, BundledDevice[]][] = (() => {
@@ -47,12 +48,12 @@ export function DeviceEditor({ text, doc, deviceFor, onChange, onUploadCsv, onCl
                   <label className="chk"><input type="checkbox" checked={!!d.inUse} onChange={(e) => set(d.index, 'inUse', e.target.checked ? 1 : 0)} /> {`Device ${d.index + 1}`}</label>
                 </legend>
                 <div className="device-grid">
-                  <label>Name<input type="text" value={d.name} onChange={(e) => set(d.index, 'name', e.target.value, true)} /></label>
-                  <label>Channel<input type="number" min={1} max={16} value={d.ch} onChange={(e) => set(d.index, 'ch', Number(e.target.value), true)} /></label>
+                  <label>Name<ValidatedInput value={d.name} allowEmpty validate={validateName('Name')} onCommit={(raw) => set(d.index, 'name', raw, true)} /></label>
+                  <label>Channel<ValidatedInput inputMode="numeric" value={String(d.ch)} validate={validateInt('Channel', 1, 16)} onCommit={(raw) => set(d.index, 'ch', Number(raw), true)} /></label>
                   <EnumField label="Out port" map={PORT} value={d.portOut} onSet={(v) => set(d.index, 'portOut', v, true)} />
                   <EnumField label="In port" map={PORT} value={d.portIn} onSet={(v) => set(d.index, 'portIn', v, true)} />
-                  <label>Virt. cable out<input type="number" min={1} value={d.cableIdOut + 1} onChange={(e) => e.target.value !== '' && set(d.index, 'cableIdOut', Math.max(0, Number(e.target.value) - 1), true)} /></label>
-                  <label>Virt. cable in<input type="number" min={1} value={d.cableIdIn + 1} onChange={(e) => e.target.value !== '' && set(d.index, 'cableIdIn', Math.max(0, Number(e.target.value) - 1), true)} /></label>
+                  <label>Virt. cable out<ValidatedInput inputMode="numeric" value={String(d.cableIdOut + 1)} validate={validateInt('Virt. cable out', 1)} onCommit={(raw) => set(d.index, 'cableIdOut', Math.max(0, Number(raw) - 1), true)} /></label>
+                  <label>Virt. cable in<ValidatedInput inputMode="numeric" value={String(d.cableIdIn + 1)} validate={validateInt('Virt. cable in', 1)} onCommit={(raw) => set(d.index, 'cableIdIn', Math.max(0, Number(raw) - 1), true)} /></label>
                 </div>
                 <div className="device-csv">
                   <label>Preset CSV
