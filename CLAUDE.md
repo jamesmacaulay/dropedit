@@ -121,9 +121,10 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
   `decode <file.json>` and update the maps. Still raw numbers: `msgType` is partially mapped
   (`MSG_TYPE`); the Flex curve's XY-point storage is unknown (its slot keeps default min/max until
   the points are edited — capture a non-default Flex to locate it).
-- **`csvRef` high 16 bits** (a checksum/flags) aren't reproduced; only the low-16 CSV row index is
-  (verified). Centralized in `presetDb.makeCsvRef`. A control still works without it (CC/ch/name are
-  independent) — but verify on hardware.
+- **`csvRef` — fully solved** (hardware capture, `scripts/decode-csvref.mjs`):
+  `csvRef = 0x40000000 | (cc << 23) | rowIndex` (bit 30 = valid-reference flag, bits 23-29 = CC,
+  low 16 = CSV row index). No checksum; renaming doesn't change it. `presetDb.makeCsvRef(row, cc)`
+  writes it; a manual edit of a slot's identity clears it to 0 (per the firmware docs).
 - **Snapshot editing** is complete: Save (selection-group-aware), Edit (membership + per-control
   stored values + the snapshot's own **one-shot MIDI output slots**, reusing SlotList /
   `setSlotField` / `addSlot` on type `'snp'`), and Jump/Load. A snapshot's output slots get inserted
@@ -134,8 +135,7 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
   can break the presetDb tests, which assert on specific param names/rows — update those alongside.)
 - **Hardware status:** projects exported by the app are used on real Drop hardware (control
   mappings, output slots, values, snapshots save/jump/load, decoded enums all confirmed in practice).
-  Only two narrow bits remain unconfirmed on hardware: the `csvRef` high-16 checksum (above; benign —
-  controls work without it) and the placement of a snapshot's own output slots (added in the snapshot
+  One narrow bit remains unconfirmed on hardware: the placement of a snapshot's own output slots (added in the snapshot
   Edit work, inserted after `data`; not yet hardware-tested). Still: encourage keeping backups.
 
 ## Conventions

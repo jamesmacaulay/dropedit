@@ -34,10 +34,18 @@ describe('presetDb', () => {
     expect(dev.params.length).toBeGreaterThan(100)
   })
 
-  it('csvRef low 16 bits equal the rowIndex (verified half)', () => {
-    for (const idx of [15, 16, 75, 46, 57]) {
-      expect(makeCsvRef(idx) & 0xffff).toBe(idx)
-    }
+  it('csvRef = flag | (cc<<23) | rowIndex (hardware-verified, scripts/decode-csvref.mjs)', () => {
+    // exact 32-bit values from the hardware capture
+    expect(makeCsvRef(15, 52)).toBe(0x5a00000f) // Delay / Amount
+    expect(makeCsvRef(16, 53)).toBe(0x5a800010) // Delay / Rate
+    expect(makeCsvRef(75, 91)).toBe(0x6d80004b) // Reverb / Reverb amount
+    expect(makeCsvRef(46, 81)).toBe(0x6880002e) // High-pass filter / Frequency
+    expect(makeCsvRef(57, 7)).toBe(0x43800039)  // Master / Master level
+    // field layout: low 16 = row, bits 23-29 = cc, bit 30 set
+    const ref = makeCsvRef(15, 52)
+    expect(ref & 0xffff).toBe(15)
+    expect((ref >>> 23) & 0x7f).toBe(52)
+    expect((ref >>> 30) & 1).toBe(1)
   })
 
   it('builds friendly labels', () => {
@@ -48,7 +56,7 @@ describe('presetDb', () => {
   describe('slotParamRow', () => {
     // Deluge.csv has 128 distinct CCs (no duplicates), so CC-matching is unambiguous there.
     it('uses csvRef when it points at a row whose CC matches', () => {
-      expect(slotParamRow(dev, 3, makeCsvRef(15), 52)).toBe(15) // Delay/Amount: row 15, cc 52
+      expect(slotParamRow(dev, 3, makeCsvRef(15, 52), 52)).toBe(15) // Delay/Amount: row 15, cc 52
     })
     it('falls back to a unique CC match when csvRef is 0/unset', () => {
       expect(slotParamRow(dev, 3, 0, 52)).toBe(15)   // csvRef 0 but cc 52 is unique -> Delay/Amount
@@ -68,7 +76,7 @@ describe('presetDb', () => {
       const ambig: PresetDevice = { manufacturer: 'X', device: 'Y', params, byRowIndex: new Map(params.map((p) => [p.rowIndex, p])) }
       expect(slotParamRow(ambig, 3, 0, 7)).toBeNull()  // ambiguous -> don't guess
       expect(slotParamRow(ambig, 3, 0, 10)).toBe(2)    // unique -> resolves
-      expect(slotParamRow(ambig, 3, makeCsvRef(1), 7)).toBe(1) // csvRef disambiguates the duplicate
+      expect(slotParamRow(ambig, 3, makeCsvRef(1, 7), 7)).toBe(1) // csvRef disambiguates the duplicate
     })
   })
 

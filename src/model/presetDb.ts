@@ -132,18 +132,17 @@ export function deriveControlName(category: string, name: string): string {
   return joinName(extraShorten(cat), extraShorten(param))
 }
 
-// csvRef encoding.
-//   VERIFIED: low 16 bits = rowIndex (Amount=15, Rate=16, Reverb amount=75,
-//   HPF Freq=46, Master level=57 — exact against the real project).
-//   SPIKE: high 16 bits are a checksum/flags (byte[1]=0x80 except on a renamed
-//   control where it was 0x00; byte[0] varies per param, not a simple section hash).
-//   Not yet reproduced. We write the verified low word only (high word 0). This still
-//   produces a fully functional layout — the control's CC (msgNr), channel, and display
-//   `name` are independent of csvRef; csvRef is the Drop's re-link/feedback metadata.
-//   Centralized here so it's a one-line upgrade once the checksum is solved on hardware.
-// Observed samples for the future fix (rowIndex -> full csvRef):
-//   15 -> 0x5A00000F (renamed), 16 -> 0x5A800010, 75 -> 0x6D80004B,
-//   46 -> 0x6880002E, 57 -> 0x43800039
-export function makeCsvRef(rowIndex: number): number {
-  return rowIndex >>> 0
+// csvRef encoding — SOLVED from a 28-sample hardware capture (scripts/decode-csvref.mjs):
+//   csvRef = 0x40000000 | (cc << 23) | (rowIndex & 0xffff)
+//     bits 0..15  = CSV row index (0-based, blanks included)
+//     bits 23..30 = an 8-bit "(0x80 | cc)" byte: low 7 bits are the CC (0-127); the top bit (-> bit
+//                   30, the 0x40000000) is always set on CSV-preset mappings — a "valid reference"
+//                   marker, matching the docs' "0 = none, non-zero = entry". (All samples are CC
+//                   presets; a non-CC CSV preset could in theory use that bit differently.)
+//   So the high word just re-encodes the CC (redundant with msgNr) — there is NO checksum, and
+//   renaming a control does NOT change csvRef. Verified exact, e.g.:
+//     Delay/Amount  cc52 row15 -> 0x5A00000F   Reverb amount cc91 row75 -> 0x6D80004B
+//     HPF Freq      cc81 row46 -> 0x6880002E   Master level  cc7  row57 -> 0x43800039
+export function makeCsvRef(rowIndex: number, cc: number): number {
+  return (0x40000000 | ((cc & 0xff) << 23) | (rowIndex & 0xffff)) >>> 0
 }

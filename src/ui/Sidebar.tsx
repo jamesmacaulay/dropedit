@@ -274,7 +274,17 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   const sh = <K extends keyof SlotView>(k: K): SlotView[K] | typeof MULTI => {
     const f = slots[0][k]; return slots.every((s) => s[k] === f) ? f : MULTI
   }
-  const set = (f: keyof SlotView, v: number, coalesce = false) => { let t = text; for (const e of entries) t = setSlotField(t, e.type, e.id, e.slot.key, f as string, v); onChange(t, coalesce) }
+  // editing a slot's mapping *identity* by hand (target device / message type / number) means it's no
+  // longer a CSV-preset assignment, so clear csvRef per the firmware docs ("leave this at 0 otherwise").
+  // (Picking a parameter from the dropdown goes through setSlotParam, which sets csvRef itself.)
+  const set = (f: keyof SlotView, v: number, coalesce = false) => {
+    let t = text
+    for (const e of entries) {
+      t = setSlotField(t, e.type, e.id, e.slot.key, f as string, v)
+      if (f === 'target' || f === 'msgType' || f === 'msgNr') t = setSlotField(t, e.type, e.id, e.slot.key, 'csvRef', 0)
+    }
+    onChange(t, coalesce)
+  }
   const setParam = (rowIndex: number) => {
     const p = device?.byRowIndex.get(rowIndex); if (!p) return
     const derived = deriveControlName(p.section, p.name)

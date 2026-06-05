@@ -16,10 +16,6 @@ A browser-based editor for **Neuzeit Drop** project files, hosted at https://jam
 
 ## Known limitations
 
-- **`csvRef` high 16 bits** are a checksum/flags that aren't reproduced yet (only the verified
-  low-16 row index is written). A control still works fully — its CC, channel, and display
-  `name` are independent of `csvRef`; the checksum is the Drop's re-link/feedback metadata.
-  Centralized in `presetDb.makeCsvRef` for a one-line upgrade once solved on hardware.
 - The enum/value encodings (behavior, LED style, curve, port, message type, Min/Max scaling, Flex XY,
   Program+Bank packing) are **decoded from hardware captures** — see [`docs/drop-format.md`](docs/drop-format.md).
   Unknown/future codes degrade gracefully to a "Custom" raw-value field.
@@ -52,8 +48,9 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
     file's empty-object quirks). This is why we don't use `JSON.stringify`.
   - `controlId` — control IDs encode physical position: rotary/rotbut `<layer><col><row>`,
     fader/mute `<layer><col>`. The first digit is the layer (so "copy layer" is a digit rewrite).
-  - `presetDb` — parses a midi-main device CSV into parameters; `csvRef` low 16 bits = CSV row
-    index (verified). See the `csvRef` note below.
+  - `presetDb` — parses a midi-main device CSV into parameters; `makeCsvRef` writes the (now
+    hardware-decoded) `csvRef = 0x40000000 | (cc<<23) | rowIndex`; `slotParamRow` resolves a slot's
+    preset (by csvRef, falling back to a unique CC match) for the dropdown + auto-naming.
   - `dropProject` — typed read-views (controls, slots, layers, devices, selection groups).
   - `enums` — decoded id→name maps (behavior, LED style, curve, message type, port) plus the
     value-encoding helpers (Min/Max ↔ 14-bit scaling, Flex XY packing, Program+Bank float).
@@ -64,8 +61,9 @@ For contributors/agents: [`CLAUDE.md`](CLAUDE.md) is the architecture + working 
 - **`src/ui/`** — React: `Surface` (SVG hardware), `Sidebar` (per-selection editing), `EnumField`
   (dropdown + Custom fallback), `SnapshotGrid` + `SnapshotMeta`, `DeviceEditor`, and `App` (owns the
   project text; threads undo/redo history, localStorage autosave, and the snapshot Save/Edit/Jump-Load modes).
-- **`scripts/`** — `sync-midi-db.mjs` (refresh the bundled preset DB from a pinned commit) and
-  `decode-enums.mjs` (decode the Drop's enum/value encodings from a hardware capture).
+- **`scripts/`** — `sync-midi-db.mjs` (refresh the bundled preset DB from a pinned commit),
+  `decode-enums.mjs` (decode the Drop's enum/value encodings from a hardware capture), and
+  `decode-csvref.mjs` (capture + verify the `csvRef` encoding).
 
 ## Hosting
 

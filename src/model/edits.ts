@@ -148,8 +148,8 @@ export function assignParam(text: string, type: ControlType, id: string, param: 
   const doc = parseJson(text)
   const obj = getPath(doc.root, ['map', type, id])
   const name = param.name.toUpperCase()
-  const csvRef = makeCsvRef(param.rowIndex)
   const msgNr = param.cc ?? 0
+  const csvRef = makeCsvRef(param.rowIndex, msgNr)
   const slot0 = getPath(doc.root, ['map', type, id, '0'])
   if (obj && obj.kind === 'object' && slot0 && slot0.kind === 'object') {
     // edit in place: name + slot0 msgType/msgNr/csvRef (+ optional ch)
@@ -415,7 +415,7 @@ export function setSlotParam(text: string, type: ControlType, id: string, slot: 
   let t = text
   t = setSlotField(t, type, id, slot, 'msgType', 3)
   t = setSlotField(t, type, id, slot, 'msgNr', param.cc ?? 0)
-  t = setSlotField(t, type, id, slot, 'csvRef', makeCsvRef(param.rowIndex))
+  t = setSlotField(t, type, id, slot, 'csvRef', makeCsvRef(param.rowIndex, param.cc ?? 0))
   return t
 }
 

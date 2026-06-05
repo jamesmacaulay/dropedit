@@ -72,14 +72,14 @@ describe('assignParam', () => {
     const out = assignParam(EXP, 'rotary', '000', MASTER_LEVEL)
     const c = obj(out).map.rotary['000']
     expect(c.name).toBe('MASTER LEVEL')
-    expect(c['0']).toMatchObject({ msgType: 3, msgNr: 7, csvRef: 57 })
+    expect(c['0']).toMatchObject({ msgType: 3, msgNr: 7, csvRef: 0x43800039 }) // Master level: row 57, cc 7
   })
   it('creates a control at an unmapped position', () => {
     expect(mappedIds(load(EXP), 'rotary').has('100')).toBe(false)
     const out = assignParam(EXP, 'rotary', '100', MASTER_LEVEL, 2)
     const c = obj(out).map.rotary['100']
     expect(c).toMatchObject({ name: 'MASTER LEVEL', behavId: 1 })
-    expect(c['0']).toMatchObject({ msgType: 3, msgNr: 7, csvRef: 57, ch: 2, inUse: 1 })
+    expect(c['0']).toMatchObject({ msgType: 3, msgNr: 7, csvRef: 0x43800039, ch: 2, inUse: 1 })
     // everything else still valid + untouched
     expect(obj(out).map.rotary['000'].name).toBe('AMOUNT')
   })
