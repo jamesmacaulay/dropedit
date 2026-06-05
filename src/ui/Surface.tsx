@@ -6,6 +6,13 @@ import { colorFor } from './palette'
 
 export const selKey = (type: string, id: string) => `${type}:${id}`
 
+// how a click changes the selection: replace it, toggle the clicked items, or range-extend (shift).
+export type SelectMode = 'replace' | 'toggle' | 'range'
+// cmd (mac) / ctrl (win-linux) = toggle; shift = range. On mac a ctrl-click is a context-menu, so
+// mac users use cmd — metaKey covers that; we never need to special-case it here.
+const modeOf = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): SelectMode =>
+  e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey) ? 'toggle' : 'replace'
+
 // snapshot save / edit modes: controls tint green (included) / red (not)
 const SAVE_GREEN = '#22c55e', SAVE_RED = '#ef4444'
 
@@ -13,7 +20,7 @@ export interface SurfaceProps {
   doc: JsonDoc
   layer: number
   selected: Set<string>
-  onSelect: (keys: string[], additive: boolean) => void
+  onSelect: (keys: string[], mode: SelectMode) => void
   /** save mode: tint each control green (in this selection group) / red (not) */
   saveGroup?: number | null
   /** snapshot edit mode: tint each control green (stored in this snapshot) / red (not) */
@@ -70,7 +77,7 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, s
   const labelBtn = (key: string, x: number, y: number, w: number, text: string, keys: () => string[], hint?: string) => {
     const on = full(keys())
     return (
-      <g key={key} style={{ cursor: 'pointer' }} onClick={(e) => onSelect(keys(), e.shiftKey)}>
+      <g key={key} style={{ cursor: 'pointer' }} onClick={(e) => onSelect(keys(), modeOf(e))}>
         <rect x={x} y={y} width={w} height={LBL_H} rx={6} fill={on ? '#2f3340' : '#23232a'} stroke={on ? '#fff' : '#454552'} strokeWidth={on ? 2 : 1} />
         <text x={x + w / 2} y={y + LBL_H / 2 + 3.5} textAnchor="middle" fontSize={10} fill={on ? '#fff' : '#9aa0ad'}>
           {text}{hint && <tspan dx={3} fontSize={8} fillOpacity={0.55}>{hint}</tspan>}
@@ -107,10 +114,10 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, s
         <g key={`r${id}`}>
           <circle cx={cx} cy={cy} r={ROT_R} fill={fillFor('rotary', id, rot, '#26262c')}
             stroke={rsel ? '#fff' : '#54545e'} strokeWidth={rsel ? 3 : 1} style={{ cursor: 'pointer' }}
-            onClick={(e) => onSelect([selKey('rotary', id)], e.shiftKey)} />
+            onClick={(e) => onSelect([selKey('rotary', id)], modeOf(e))} />
           <circle cx={cx} cy={cy} r={5} fill={tinting ? (rb ? fillFor('rotbut', id, rb, '#141418') : '#141418') : (rb ? colorFor(rb.colId) : '#141418')}
             stroke={bsel ? '#fff' : '#3a3a42'} strokeWidth={bsel ? 2 : 1} style={{ cursor: 'pointer' }}
-            onClick={(e) => { e.stopPropagation(); onSelect([selKey('rotbut', id)], e.shiftKey) }} />
+            onClick={(e) => { e.stopPropagation(); onSelect([selKey('rotbut', id)], modeOf(e)) }} />
           <text x={cx} y={cy + ROT_R + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{rot ? trunc(rot.name) : ''}</text>
         </g>,
       )
@@ -122,7 +129,7 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, s
       <g key={`m${lc}`}>
         <rect x={cx - 17} y={muteY} width={34} height={MUTE_H} rx={6} fill={fillFor('mute', lc, mv, '#26262c')}
           stroke={msel ? '#fff' : '#54545e'} strokeWidth={msel ? 3 : 1} style={{ cursor: 'pointer' }}
-          onClick={(e) => onSelect([selKey('mute', lc)], e.shiftKey)} />
+          onClick={(e) => onSelect([selKey('mute', lc)], modeOf(e))} />
         <text x={cx} y={muteY + MUTE_H + 11} textAnchor="middle" fontSize={8} fill="#c4c8d0">{mv ? trunc(mv.name) : ''}</text>
       </g>,
     )
@@ -132,7 +139,7 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, s
       <g key={`f${lc}`}>
         <rect x={cx - 13} y={faderY} width={26} height={FADER_H} rx={5} fill={fillFor('fader', lc, fv, '#26262c')}
           stroke={fsel ? '#fff' : '#54545e'} strokeWidth={fsel ? 3 : 1} style={{ cursor: 'pointer' }}
-          onClick={(e) => onSelect([selKey('fader', lc)], e.shiftKey)} />
+          onClick={(e) => onSelect([selKey('fader', lc)], modeOf(e))} />
         <text x={cx} y={faderY + FADER_H + 12} textAnchor="middle" fontSize={8} fill="#c4c8d0">{fv ? trunc(fv.name) : ''}</text>
       </g>,
     )
@@ -141,7 +148,7 @@ export function Surface({ doc, layer, selected, onSelect, saveGroup, editSnap, s
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Drop layer ${layer + 1}`} className="surface"
       style={{ background: '#1b1b1f', borderRadius: 10, maxWidth: '100%' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onSelect([], false) }}>
+      onClick={(e) => { if (e.target === e.currentTarget) onSelect([], 'replace') }}>
       {cells}
     </svg>
   )

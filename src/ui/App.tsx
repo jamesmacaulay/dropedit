@@ -7,7 +7,8 @@ import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
 import { isPositional, withLayer, withBank, controlIdsForLayer, type ControlType } from '../model/controlId'
 import { COLOR_NAMES } from './palette'
 import { ValidatedInput, validateName, FieldErrorContext } from './ValidatedInput'
-import { Surface, selKey } from './Surface'
+import { Surface, selKey, type SelectMode } from './Surface'
+import { rangeSelect } from '../model/selection'
 import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
 import { DeviceEditor } from './DeviceEditor'
@@ -220,9 +221,11 @@ export function App() {
     document.body.appendChild(a); a.click(); a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-  function onSelect(keys: string[], additive: boolean) {
+  function onSelect(keys: string[], mode: SelectMode) {
     setSelection((sel) => {
-      if (!additive) return keys
+      if (mode === 'replace') return keys
+      if (mode === 'range') return rangeSelect(sel, keys)
+      // toggle: add the keys if any are missing, otherwise remove them all
       const set = new Set(sel)
       const allIn = keys.every((k) => set.has(k))
       if (allIn) keys.forEach((k) => set.delete(k))

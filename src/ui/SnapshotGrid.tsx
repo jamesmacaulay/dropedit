@@ -4,7 +4,7 @@ import { readControl } from '../model/dropProject'
 import { setControlField } from '../model/edits'
 import { colorFor, COLOR_NAMES } from './palette'
 import { ValidatedInput, validateName } from './ValidatedInput'
-import { selKey } from './Surface'
+import { selKey, type SelectMode } from './Surface'
 
 // Snapshot pads: 4 columns x 5 rows = 20 snapshots per bank. Snapshots are GLOBAL
 // (not per-layer); their stored scene captures every layer. id = `<bank:2><col><row>`.
@@ -17,7 +17,7 @@ export interface SnapshotGridProps {
   bank: number
   bankMode: boolean
   selected: Set<string>
-  onSelect: (keys: string[], additive: boolean) => void
+  onSelect: (keys: string[], mode: SelectMode) => void
   onPickBank: (bank: number) => void
   /** when set (save/load/edit mode), a pad click triggers this instead of selecting the pad */
   onPad?: (id: string) => void
@@ -57,7 +57,7 @@ export function SnapshotGrid({ doc, bank, bankMode, selected, onSelect, onPickBa
         pads.push(
           <button key={id} className={'pad' + (selected.has(key) ? ' sel' : '') + (editing === id ? ' editing' : '') + (snp ? '' : ' empty') + (armed ? ' armed' : '')}
             title={snp ? snp.name : `empty (${id})`} style={snp ? { background: colorFor(snp.colId) } : undefined}
-            onClick={(e) => onPad ? onPad(id) : onSelect([key], e.shiftKey)} />,
+            onClick={(e) => onPad ? onPad(id) : onSelect([key], (e.shiftKey || e.metaKey || e.ctrlKey) ? 'toggle' : 'replace')} />,
         )
       }
     }

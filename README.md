@@ -5,7 +5,7 @@ A browser-based editor for **Neuzeit Drop** project files, hosted at https://jam
 ## Features
 
 - Import a Drop project `.json` file from your computer or start from a Clean Init or DAW Init template, download after editing
-- Click / shift-click / row & column / "All" selection, with multi-select batch editing of any or all controls in a layer at once
+- Multi-select with batch editing of any or all controls in a layer at once: click to select, **⌘/Ctrl-click** to toggle individual controls, **Shift-click** for spreadsheet-style range selection, plus row / column / "All" labels
 - Copy & paste multiple selected controls within or between layers
 - Undo / redo with autosave to localStorage
 - MIDI Output Device management with included preset CSVs from [pencilresearch/midi](https://github.com/pencilresearch/midi) for human-readable parameter names

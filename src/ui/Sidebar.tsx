@@ -46,7 +46,7 @@ function shared<T>(items: Target[], fn: (t: Target) => T): T | typeof MULTI | un
 export function Sidebar(props: SidebarProps) {
   const { selection } = props
   if (selection.length === 0) {
-    return <aside className="sidebar"><p className="hint">Select a control. Shift-click — or click a row/column label — to select several and edit them together.</p></aside>
+    return <aside className="sidebar"><p className="hint">Select a control. <strong>⌘/Ctrl-click</strong> adds or removes controls; <strong>Shift-click</strong> selects a range. Click a row/column label to grab a whole row or column.</p></aside>
   }
   if (selection.length === 1 && selection[0].startsWith('snp:')) {
     return <SnapshotEditor {...props} id={selection[0].slice(4)} />

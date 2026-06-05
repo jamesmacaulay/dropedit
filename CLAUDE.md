@@ -39,7 +39,9 @@ src/model/   pure TS, fully unit-tested — the brains
                   parseJson, getPath/getObject/getMember, editSetScalar/editInsertMember/
                   editRemoveMember, applyEdits. Every edit is expressed as splices on the original text.
   controlId.ts    control id <-> {type,layer,col,row}; layer ops (first id digit = layer).
+  selection.ts    rangeSelect: pure shift-click range selection (union-of-boxes over the visual grid).
   presetDb.ts     parse a device preset CSV -> params; makeCsvRef (low16 = CSV row index, verified).
+                  deriveControlName (auto-name a control from a param, <=16 chars, category-aware).
   dropProject.ts  typed READ-views: readControl, readLayers, readDevices, readStateValue,
                   readGroupMember, selGroupLocation, readSnapshotValue/readSnapshotMember.
   edits.ts        ALL mutations -> return new project text:
@@ -53,8 +55,12 @@ src/ui/      React (prop-driven; easy to render-test)
   App.tsx         owns `text` (project JSON string = source of truth) + selection/clipboard/etc.
                   doc = useMemo(parseJson(text)); every edit calls a model fn and setText(newText),
                   so the view always equals what will be saved. Selection = string keys "type:id".
+                  onSelect(keys, mode): replace / toggle (⌘·Ctrl-click) / range (shift-click, via
+                  model selection.rangeSelect).
   Surface.tsx     the Drop as inline SVG: rotaries(+push), faders, mutes; clickable row/col/All labels.
-  Sidebar.tsx     per-selection editor, tabs: General / Output slots / Selection groups.
+                  Click modifiers -> SelectMode (replace / toggle / range).
+  Sidebar.tsx     per-selection editor, tabs: Config (general + output slots) / Groups.
+                  Inputs go through ValidatedInput (draft/validate/commit; errors in the footer bar).
                   Multi-select uses a [multiple values] pattern (shared value or placeholder).
                   Also exports SnapshotEditPanel: the snapshot Edit-mode sidebar (auto-adapts —
                   the snapshot's own output slots when no control is selected, stored-value editor when one is).
