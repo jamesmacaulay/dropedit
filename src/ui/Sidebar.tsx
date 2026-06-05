@@ -6,7 +6,7 @@ import {
 } from '../model/dropProject'
 import type { ControlType } from '../model/controlId'
 import type { PresetDevice } from '../model/presetDb'
-import { paramLabel, deriveControlName, slotParamRow } from '../model/presetDb'
+import { paramLabel, deriveControlName, slotParamRow, makeCsvRef } from '../model/presetDb'
 import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
@@ -366,7 +366,12 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     </label>
   }
 
-  // friendly param picker — fills msgType + CC + csvRef from the target device's CSV
+  // friendly param picker — fills msgType + CC + csvRef from the target device's CSV. csvRef is shown
+  // read-only beneath it (it's fully derived from the picked param's CC + row): non-zero = the CSV
+  // link is stored, 0 = none (the param above is then inferred from the CC).
+  const csvRefVal = sh('csvRef')
+  const csvRefText = csvRefVal === MULTI ? '[multiple]'
+    : csvRefVal === 0 ? '0' : '0x' + (csvRefVal >>> 0).toString(16).toUpperCase().padStart(8, '0')
   const paramPicker = (
     <label>Parameter {device ? `(${device.device})` : '(no CSV)'}
       <select value={paramShared != null ? String(paramShared) : ''} disabled={!device} onChange={(e) => e.target.value !== '' && setParam(Number(e.target.value))}>
@@ -375,6 +380,26 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       </select>
     </label>
   )
+  // the csvRef a slot *should* have given its detected preset param (or null if none is detected)
+  const correctCsvRef = (e: { slot: SlotView }) => {
+    const dev = deviceFor(e.slot.target)
+    const row = slotParamRow(dev, e.slot.msgType, e.slot.csvRef, e.slot.msgNr)
+    return row != null && dev ? makeCsvRef(row, dev.byRowIndex.get(row)?.cc ?? 0) : null
+  }
+  // ↻ stamps csvRef from the detected preset (disabled when there's nothing to stamp / it'd be a no-op);
+  // ✕ clears it to 0. Both write csvRef directly, so they skip the "clear on manual edit" rule in `set`.
+  const canRefresh = entries.some((e) => { const c = correctCsvRef(e); return c != null && c !== (e.slot.csvRef >>> 0) })
+  const canClear = entries.some((e) => e.slot.csvRef !== 0)
+  const refreshCsvRef = () => { let t = text; for (const e of entries) { const c = correctCsvRef(e); if (c != null) t = setSlotField(t, e.type, e.id, e.slot.key, 'csvRef', c) } if (t !== text) onChange(t) }
+  const clearCsvRef = () => { let t = text; for (const e of entries) if (e.slot.csvRef !== 0) t = setSlotField(t, e.type, e.id, e.slot.key, 'csvRef', 0); if (t !== text) onChange(t) }
+  // read-only value, OUTSIDE the label (so clicking it doesn't open the dropdown; selectable to copy)
+  const csvRefLine = device ? (
+    <div className="slot-ref">
+      csvRef <code>{csvRefText}</code>
+      <button type="button" className="ref-btn" title="Set csvRef from the detected preset" disabled={!canRefresh} onClick={refreshCsvRef}>↻</button>
+      <button type="button" className="ref-btn" title="Clear csvRef (set to 0)" disabled={!canClear} onClick={clearCsvRef}>✕</button>
+    </div>
+  ) : null
 
   return (
     <div className="slot-fields">
@@ -384,6 +409,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
         value={msgType === MULTI ? undefined : (msgType as number)} multi={msgType === MULTI}
         onSet={(v) => set('msgType', v)} />
       {paramPicker}
+      {csvRefLine}
       {/* msgNr is the note/CC number for normal types; for program types it's hidden (Program+Bank's
           two bank values live there, edited via the Bank fields below). */}
       {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
@@ -397,7 +423,6 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
               ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
               : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
         : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Message Type and Curve to edit it.</p>}
-      {num('csvRef', 'csvRef')}
     </div>
   )
 }

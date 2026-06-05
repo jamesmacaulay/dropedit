@@ -49,9 +49,11 @@ input.invalid { border-color: #ff6b6b !important; }
 .crash { max-width: 560px; margin: 12vh auto; padding: 0 24px; text-align: center; color: var(--txt); }
 .crash h1 { color: var(--accent); font-size: 20px; }
 .crash p { color: var(--dim); line-height: 1.5; }
-.crash button { margin-top: 8px; padding: 8px 16px; border-color: var(--accent); color: var(--accent); }
+.crash-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+.crash button { padding: 8px 16px; border-color: var(--accent); color: var(--accent); }
 .crash button:hover { background: var(--accent); color: #222; }
-.crash-detail { margin-top: 24px; font-family: ui-monospace, monospace; font-size: 11px; color: #6a6f79;
+.crash-hint { font-size: 12px; margin-top: 14px; }
+.crash-detail { margin-top: 20px; font-family: ui-monospace, monospace; font-size: 11px; color: #6a6f79;
   word-break: break-word; }
 .empty { padding: 60px; text-align: center; color: var(--dim); }
 .appfoot { flex: none; padding: 5px 16px; font-size: 11px; color: var(--dim);
@@ -135,6 +137,14 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 .sidebar label.chk { flex-direction: row; align-items: center; gap: 8px; color: var(--txt); white-space: nowrap; }
 .sidebar .hint { color: var(--dim); font-size: 13px; }
 .sidebar .meta { color: var(--dim); font-size: 11px; margin: 2px 0 0; }
+/* read-only derived csvRef shown under the Parameter dropdown (plain grey, selectable to copy) */
+.sidebar .slot-ref { color: var(--dim); font-size: 10px; margin-top: -4px; display: flex; align-items: center; gap: 4px; }
+.sidebar .slot-ref code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--dim); background: none; padding: 0; user-select: all; }
+.sidebar .slot-ref .ref-btn { background: none; border: none; padding: 0 2px; color: var(--dim);
+  cursor: pointer; font-size: 12px; line-height: 1; }
+.sidebar .slot-ref .ref-btn:hover:not(:disabled) { color: var(--accent); }
+.sidebar .slot-ref .ref-btn:disabled { opacity: .35; cursor: default; }
 .sidebar fieldset.slot { border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px 10px; }
 .sidebar fieldset.slot.off { opacity: .7; }
 .sidebar fieldset.slot legend { color: var(--accent); font-size: 11px; display: flex; align-items: center; gap: 8px; }

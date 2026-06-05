@@ -1,8 +1,9 @@
 import { Component, type ReactNode } from 'react'
 
-// Last-resort guard: if anything throws during render (e.g. a project in a format we can't parse
-// that slipped into localStorage), show a recovery screen instead of a blank page — with a button
-// that clears the saved project so a reload can't get stuck on the same bad data.
+// Last-resort guard for ANY uncaught render error — a code bug, a transient hot-reload, or (the
+// original reason) a project that slipped into storage in a format we can't parse. Shows a recovery
+// screen instead of a blank page. "Reload" just retries (touches nothing); "Clear saved project" is
+// the escape hatch for the rare case where the stored project itself is what keeps crashing.
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null }
   static getDerivedStateFromError(error: Error) { return { error } }
@@ -19,9 +20,14 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     return (
       <div className="crash">
         <h1>Something went wrong</h1>
-        <p>dropedit couldn’t open the current project — it may be in a format it can’t read. Your
-          original files on disk are untouched.</p>
-        <button onClick={this.reset}>Clear the saved project &amp; reload</button>
+        <p>dropedit hit an unexpected error and stopped. Your files on disk are untouched.</p>
+        <div className="crash-actions">
+          <button onClick={() => location.reload()}>Reload</button>
+          <button className="danger" onClick={this.reset}>Clear saved project &amp; reload</button>
+        </div>
+        <p className="crash-hint">Reloading usually recovers it. If it keeps landing here, the saved
+          project itself may be unreadable — clearing it starts fresh (your downloaded/exported files
+          aren’t affected).</p>
         <p className="crash-detail">{String(this.state.error.message || this.state.error)}</p>
       </div>
     )
