@@ -136,6 +136,18 @@ function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
   )
 }
 
+// the name we'd auto-generate from a control's preset param (the lowest in-use slot that resolves to
+// a CSV param), or null if it has none — used by the "Generate" link to offer re-deriving the name.
+function presetDerivedName(view: ControlView | undefined, deviceFor: (t: number) => PresetDevice | null): string | null {
+  if (!view) return null
+  const slots = view.slots.filter((s) => s.inUse === 1).sort((a, b) => Number(a.key) - Number(b.key))
+  for (const s of slots) {
+    const p = deviceFor(s.target)?.byRowIndex.get(s.csvRef & 0xffff)
+    if (p && s.msgType === 3 && p.cc === s.msgNr) return deriveControlName(p.section, p.name)
+  }
+  return null
+}
+
 // ---------------- controls ----------------
 function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange, onSetActive }: SidebarProps) {
   const [tab, setTab] = useState<'config' | 'groups'>('config')
@@ -162,6 +174,12 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v), true)
   const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t, true) }
 
+  // "Generate" link: selected controls whose preset param implies a name different from the current
+  // one. Clicking re-derives the name for exactly those controls (then the link self-hides).
+  const regen = targets.map((t) => ({ t, gen: presetDerivedName(t.view, deviceFor) }))
+    .filter((x) => x.gen != null && x.gen !== x.t.view?.name)
+  const onGenerate = () => { let tx = text; for (const { t, gen } of regen) tx = setControlField(tx, t.type, t.id, 'name', gen!); onChange(tx) }
+
   return (
     <aside className="sidebar">
       <h2>{single ? `${single.type} ${single.id}` : `${targets.length} controls`}</h2>
@@ -178,7 +196,10 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
             {someActive && (
               // Name spans the full width; then a [Value | Behavior] row and a [Color | LED style] row.
               <div className="field-grid">
-                <label className="field-span">Name<ValidatedInput value={name === MULTI ? '' : (name as string ?? '')} placeholder={name === MULTI ? '[multiple values]' : ''} allowEmpty validate={validateName('Name')} onCommit={(raw) => onName(raw)} /></label>
+                <label className="field-span">
+                  <span className="field-head">Name{regen.length > 0 && <button type="button" className="linkbtn" onClick={onGenerate}>Generate</button>}</span>
+                  <ValidatedInput value={name === MULTI ? '' : (name as string ?? '')} placeholder={name === MULTI ? '[multiple values]' : ''} allowEmpty validate={validateName('Name')} onCommit={(raw) => onName(raw)} />
+                </label>
                 <label>Value<ValidatedInput inputMode="decimal" value={stateVal === MULTI || stateVal === undefined ? '' : String(stateVal)} placeholder={stateVal === MULTI ? '[multiple]' : 'unset'} validate={validateNum('Value', 0, 1)} onCommit={(raw) => onStateVal(Number(raw))} /></label>
                 <EnumField key={`behav-${selection.join('|')}`} label="Behavior" map={BEHAV}
                   value={behavId === MULTI || behavId === undefined ? undefined : (behavId as number)} multi={behavId === MULTI}
