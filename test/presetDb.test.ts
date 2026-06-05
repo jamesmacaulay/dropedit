@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { parsePresetCsv, splitCsvLine, makeCsvRef, paramLabel, deriveControlName, type PresetParam } from '../src/model/presetDb'
+import { parsePresetCsv, splitCsvLine, makeCsvRef, paramLabel, deriveControlName, slotParamRow, type PresetParam, type PresetDevice } from '../src/model/presetDb'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const csv = readFileSync(join(here, '..', 'src', 'data', 'devices', 'Synthstrom', 'Deluge.csv'), 'utf8')
@@ -43,6 +43,33 @@ describe('presetDb', () => {
   it('builds friendly labels', () => {
     const p = find(dev.params, 'Reverb', 'Reverb amount')!
     expect(paramLabel(p)).toBe('Reverb / Reverb amount')
+  })
+
+  describe('slotParamRow', () => {
+    // Deluge.csv has 128 distinct CCs (no duplicates), so CC-matching is unambiguous there.
+    it('uses csvRef when it points at a row whose CC matches', () => {
+      expect(slotParamRow(dev, 3, makeCsvRef(15), 52)).toBe(15) // Delay/Amount: row 15, cc 52
+    })
+    it('falls back to a unique CC match when csvRef is 0/unset', () => {
+      expect(slotParamRow(dev, 3, 0, 52)).toBe(15)   // csvRef 0 but cc 52 is unique -> Delay/Amount
+      expect(slotParamRow(dev, 3, 0, 91)).toBe(75)   // Reverb amount, cc 91
+    })
+    it('returns null when nothing matches or it is not a CC slot', () => {
+      expect(slotParamRow(dev, 3, 0, 9999)).toBeNull() // no such CC
+      expect(slotParamRow(dev, 2, 0, 52)).toBeNull()   // msgType 2 (Note On), not CC
+      expect(slotParamRow(null, 3, 0, 52)).toBeNull()  // no device
+    })
+    it('does not guess on a device whose CSV repeats a CC', () => {
+      const params: PresetParam[] = [
+        { rowIndex: 0, section: 'A', name: 'Foo', cc: 7 },
+        { rowIndex: 1, section: 'B', name: 'Bar', cc: 7 }, // duplicate cc 7
+        { rowIndex: 2, section: 'C', name: 'Baz', cc: 10 },
+      ]
+      const ambig: PresetDevice = { manufacturer: 'X', device: 'Y', params, byRowIndex: new Map(params.map((p) => [p.rowIndex, p])) }
+      expect(slotParamRow(ambig, 3, 0, 7)).toBeNull()  // ambiguous -> don't guess
+      expect(slotParamRow(ambig, 3, 0, 10)).toBe(2)    // unique -> resolves
+      expect(slotParamRow(ambig, 3, makeCsvRef(1), 7)).toBe(1) // csvRef disambiguates the duplicate
+    })
   })
 
   it('splitCsvLine handles quoted fields with commas', () => {

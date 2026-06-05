@@ -79,6 +79,24 @@ export function paramLabel(p: PresetParam): string {
   return p.section ? `${p.section} / ${p.name}` : p.name
 }
 
+// Which CSV row a CC-type slot maps to, for the Parameter dropdown / auto-naming.
+//   1. If csvRef's low 16 bits point at a row whose CC matches, trust it (this also disambiguates
+//      devices whose CSV repeats a CC).
+//   2. csvRef is just a lookup cache the Drop leaves at 0 when a mapping wasn't assigned via CSV
+//      (per the firmware docs), so fall back to matching on the CC itself — but only when exactly one
+//      row has that CC, to avoid guessing on a duplicate-CC device.
+// Returns the rowIndex, or null if the slot can't be identified.
+export function slotParamRow(device: PresetDevice | null, msgType: number, csvRef: number, msgNr: number): number | null {
+  if (!device || msgType !== 3) return null
+  const ri = csvRef & 0xffff
+  if (ri !== 0) { // csvRef 0 = "none" (per the firmware docs) — don't treat it as a reference to row 0
+    const byRef = device.byRowIndex.get(ri)
+    if (byRef && byRef.cc === msgNr) return ri
+  }
+  const ccMatches = device.params.filter((p) => p.cc === msgNr)
+  return ccMatches.length === 1 ? ccMatches[0].rowIndex : null
+}
+
 // Derive a Drop control name (<=16 chars) from a preset param's category + name, fitting as much
 // of each as possible. Drop caps any name at 16 chars. We progressively condense: truncate each
 // word to 3 chars (`shorten`), then keep only first+last word (`extraShorten`), trying the

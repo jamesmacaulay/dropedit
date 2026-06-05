@@ -6,7 +6,7 @@ import {
 } from '../model/dropProject'
 import type { ControlType } from '../model/controlId'
 import type { PresetDevice } from '../model/presetDb'
-import { paramLabel, deriveControlName } from '../model/presetDb'
+import { paramLabel, deriveControlName, slotParamRow } from '../model/presetDb'
 import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
@@ -142,8 +142,9 @@ function presetDerivedName(view: ControlView | undefined, deviceFor: (t: number)
   if (!view) return null
   const slots = view.slots.filter((s) => s.inUse === 1).sort((a, b) => Number(a.key) - Number(b.key))
   for (const s of slots) {
-    const p = deviceFor(s.target)?.byRowIndex.get(s.csvRef & 0xffff)
-    if (p && s.msgType === 3 && p.cc === s.msgNr) return deriveControlName(p.section, p.name)
+    const dev = deviceFor(s.target)
+    const row = slotParamRow(dev, s.msgType, s.csvRef, s.msgNr)
+    if (row != null) { const p = dev!.byRowIndex.get(row)!; return deriveControlName(p.section, p.name) }
   }
   return null
 }
@@ -293,7 +294,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   }
 
   // reflect the shared current param (csvRef low-16 = row, confirmed by cc)
-  const paramOf = (s: SlotView) => { const ri = s.csvRef & 0xffff; const cur = device?.byRowIndex.get(ri); return device && cur && s.msgType === 3 && cur.cc === s.msgNr ? ri : null }
+  const paramOf = (s: SlotView) => slotParamRow(device, s.msgType, s.csvRef, s.msgNr)
   const paramShared = slots.every((s) => paramOf(s) === paramOf(slots[0])) ? paramOf(slots[0]) : null
   const msgType = sh('msgType')
 
