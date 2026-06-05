@@ -1,0 +1,569 @@
+{
+	"type": "PROJ",
+	"version": 2.00,
+	"versionInstalled": 2.01,
+	"state": {
+		"rotary": {
+			"000": 0.74218,
+			"001": 0.26626,
+			"002": 0.79102,
+			"003": 0.18593
+		},
+		"rotbut": {
+			"000": 0.0
+		},
+		"mute": {
+			"00": 1.0
+		},
+		"fader": {
+			"01": 0.12962
+		},
+		"bjBars": 8,
+		"bjQuant": 1,
+		"jumpQuant": 3
+	},
+	"device": {
+		"0": {
+			"inUse": 1,
+			"name": "Synth",
+			"portOut": 1,
+			"portIn": 1,
+			"cableIdOut": 2,
+			"cableIdIn": 0,
+			"preDrop": 7,
+			"ch": 1,
+			"csvInUse": 1,
+			"csvPath": "/midi-main/Neuzeit Instruments",
+			"csvFile": "Warp.csv",
+			"merge": {
+				"0": {
+					"inUse": 1,
+					"filter": 1540107,
+					"inpDevice": 1,
+					"targCh": 0,
+					"nGateMode": 1,
+					"nGateLink": "mute_00",
+					"tSemiOn": 1,
+					"tSemiMin": -12,
+					"tSemiMax": 12,
+					"tSemiLink": "rotary_002",
+					"tOctOn": 0,
+					"tOctMin": 0,
+					"tOctMax": 0,
+					"tOctLink": "none"
+				},
+				"1": {
+					"inUse": 1,
+					"filter": 196624,
+					"inpDevice": 2,
+					"targCh": 1,
+					"nGateMode": 2,
+					"nGateLink": "mute_00",
+					"tSemiOn": 1,
+					"tSemiMin": 0,
+					"tSemiMax": 24,
+					"tSemiLink": "rotary_002",
+					"tOctOn": 1,
+					"tOctMin": -1,
+					"tOctMax": 1,
+					"tOctLink": "rotary_003"
+				}
+			}
+		},
+		"1": {
+			"inUse": 1,
+			"name": "Keys",
+			"portOut": 0,
+			"portIn": 2,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 2,
+			"ch": 3,
+			"csvInUse": 1,
+			"csvPath": "/midi-main/Elektron",
+			"csvFile": "MachineDrum.csv",
+			"merge": {
+			}
+		},
+		"2": {
+			"inUse": 1,
+			"name": "Seq",
+			"portOut": 0,
+			"portIn": 4,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 16,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"3": {
+			"inUse": 0,
+			"name": "DEVICE 4",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"4": {
+			"inUse": 0,
+			"name": "DEVICE 5",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"5": {
+			"inUse": 0,
+			"name": "DEVICE 6",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"6": {
+			"inUse": 0,
+			"name": "DEVICE 7",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		},
+		"7": {
+			"inUse": 0,
+			"name": "DEVICE 8",
+			"portOut": 0,
+			"portIn": 0,
+			"cableIdOut": 0,
+			"cableIdIn": 0,
+			"preDrop": 0,
+			"ch": 1,
+			"csvInUse": 0,
+			"csvPath": "/midi-main",
+			"csvFile": "",
+			"merge": {
+			}
+		}
+	},
+	"map": {
+		"rotary": {
+			"000": {
+				"name": "Cutoff",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 2,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 1,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 0,
+					"csvRef": 0,
+					"msgNr": 74.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				},
+				"1": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 8,
+					"ch": 5,
+					"csvRef": 0,
+					"msgNr": 12.034,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 1
+				},
+				"3": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 0,
+					"csvRef": 0,
+					"msgNr": 75.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				}
+			},
+			"001": {
+				"name": "Vol",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 0,
+				"feedbSlotVis": 2,
+				"feedbId": 31,
+				"feedbSlot": 0,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 0,
+					"csvRef": 0,
+					"msgNr": 10.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 0
+				},
+				"1": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 3,
+					"ch": 9,
+					"csvRef": 0,
+					"msgNr": 72.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 34
+				}
+			},
+			"002": {
+				"name": "Semi",
+				"colId": 4,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 26,
+				"feedbSlot": 0
+			},
+			"003": {
+				"name": "Octaves",
+				"colId": 4,
+				"dropOrder": 0,
+				"behavId": 1,
+				"feedbSlotVis": 1,
+				"feedbId": 0,
+				"feedbSlot": 0
+			}
+		},
+		"rotbut": {
+			"000": {
+				"name": "PUSH A-1-1",
+				"colId": 6,
+				"dropOrder": 0,
+				"behavId": 3,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 0,
+				"0": {
+					"inUse": 1,
+					"target": 0,
+					"msgType": 2,
+					"ch": 2,
+					"csvRef": 0,
+					"msgNr": 48.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 9
+				}
+			},
+			"002": {
+				"name": "SemiResetCntr",
+				"colId": 7,
+				"dropOrder": 0,
+				"behavId": 7,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 0
+			}
+		},
+		"mute": {
+			"00": {
+				"name": "BTN A-1",
+				"colId": 4,
+				"dropOrder": 0,
+				"behavId": 3,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 0
+			}
+		},
+		"fader": {
+			"01": {
+				"name": "Fad",
+				"colId": 1,
+				"dropOrder": 1,
+				"behavId": 11,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 0,
+				"0": {
+					"inUse": 1,
+					"target": 2,
+					"msgType": 3,
+					"ch": 1,
+					"csvRef": 0,
+					"msgNr": 45.000,
+					"maxOut": 16383,
+					"minOut": 0,
+					"curveId": 2
+				}
+			}
+		},
+		"snp": {
+			"0000": {
+				"name": "SNP 01-1-1",
+				"colId": 4,
+				"dropOrder": 1,
+				"behavId": 4,
+				"feedbSlotVis": 1,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"data": {
+					"rotary": {
+						"000": 0.73980,
+						"001": 0.13037,
+						"002": 0.50000,
+						"003": 0.67181
+					},
+					"rotbut": {
+						"000": 1.00000,
+						"002": 0.00000
+					},
+					"mute": {
+						"00": 0.0
+					},
+					"fader": {
+						"01": 0.51348
+					}
+				}
+			},
+			"0011": {
+				"name": "SNP 01-2-2",
+				"colId": 7,
+				"dropOrder": 1,
+				"behavId": 4,
+				"feedbSlotVis": 0,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"data": {
+					"rotary": {
+						"002": 0.79095,
+						"003": 0.18591
+					},
+					"rotbut": {
+					},
+					"mute": {
+						"00": 1.0
+					},
+					"fader": {
+					}
+				}
+			},
+			"0110": {
+				"name": "SNP 02-2-1",
+				"colId": 7,
+				"dropOrder": 1,
+				"behavId": 4,
+				"feedbSlotVis": 0,
+				"feedbId": 28,
+				"feedbSlot": 1,
+				"data": {
+					"rotary": {
+						"002": 0.50000,
+						"003": 0.67181
+					},
+					"rotbut": {
+					},
+					"mute": {
+						"00": 0.0
+					},
+					"fader": {
+					}
+				}
+			}
+		}
+	},
+	"chain": {
+	},
+	"clk": {
+		"bpm": 125.00,
+		"mode": 1,
+		"deviceId": 0,
+		"sendUSB1": 3,
+		"sendUSB2": 7,
+		"sendTRS1": 1,
+		"sendTRS2": 0,
+		"sendTRS3": 3,
+		"sendTRS4": 3,
+		"dlyUSB1": 2,
+		"dlyUSB2": -1,
+		"dlyTRS1": 0,
+		"dlyTRS2": 0,
+		"dlyTRS3": 0,
+		"dlyTRS4": 0,
+		"dlyCV1": 0,
+		"dlyCV2": 3,
+		"dlyUSB1ck": -1,
+		"dlyUSB2ck": 0,
+		"dlyTRS1ck": 1,
+		"dlyTRS2ck": 0,
+		"dlyTRS3ck": 0,
+		"dlyTRS4ck": 0,
+		"dlyCV1ck": 0,
+		"dlyCV2ck": 0,
+		"maskSubPort1": 32963,
+		"maskSubPort2": 256,
+		"clkWhileStopped": 1
+	},
+	"grid": {
+		"target": 0,
+		"mode": 0,
+		"velo": 15104,
+		"ch": 0,
+		"scaleMask": 2733
+	},
+	"layers": {
+		"modeA": 1,
+		"modeB": 2,
+		"curId": 0,
+		"0": {
+			"colId": 4,
+			"name": "Layer 1"
+		},
+		"1": {
+			"colId": 7,
+			"name": "Layer 2"
+		},
+		"2": {
+			"colId": 0,
+			"name": "Layer 3"
+		},
+		"3": {
+			"colId": 2,
+			"name": "Layer 4"
+		},
+		"4": {
+			"colId": 1,
+			"name": "Layer 5"
+		},
+		"5": {
+			"colId": 3,
+			"name": "Layer 6"
+		},
+		"6": {
+			"colId": 6,
+			"name": "Layer 7"
+		},
+		"7": {
+			"colId": 5,
+			"name": "Layer 8"
+		}
+	},
+	"cvOut": {
+		"0": {
+			"cvOutMode": 0,
+			"vMin": 0.000,
+			"vMax": 5.000,
+			"link": "rotary_000"
+		},
+		"1": {
+			"cvOutMode": 8,
+			"vMin": 0.000,
+			"vMax": 5.000,
+			"link": "none"
+		}
+	},
+	"cvIn": {
+		"0": {
+			"cvInMode": 0
+		},
+		"1": {
+			"cvInMode": 0
+		}
+	},
+	"remote": {
+		"levelRx": 1,
+		"deviceRx": 0,
+		"chanRx": 16,
+		"levelTx": 3,
+		"deviceTx": 0,
+		"chanTx": 16,
+		"jumpMidiMode": 1,
+		"jumpMidiNote": 24,
+		"jumpMidiInstant": 0,
+		"jumpMidiDevice": 0,
+		"jumpMidiChan": 0
+	},
+	"settings": {
+		"dropExcl": 0,
+		"jumpExcl": 0,
+		"jumpDur": 0,
+		"sendOnLoad": 1,
+		"bankToChain": 0,
+		"chainToBank": 0,
+		"usb1Role": 1,
+		"usb2Role": 2,
+		"showCtrlNames": 1,
+		"menuRoot": 1,
+		"remembSnp": 0,
+		"selGroup": {
+			"0": {
+				"data": [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255],
+				"sgCol": 4
+			},
+			"1": {
+				"data": [0,0,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 7
+			},
+			"2": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 0
+			},
+			"3": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 2
+			},
+			"4": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 1
+			},
+			"5": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 3
+			},
+			"6": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 6
+			},
+			"7": {
+				"data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				"sgCol": 5
+			}
+		}
+	}
+}

@@ -1,0 +1,692 @@
+================================================================================
+JSON DOCUMENTATION FOR FIRMWARE 2.05
+Drop Controller Project Configuration File Format
+================================================================================
+
+This document describes the JSON structure that the STM32H743 Drop Controller
+creates when saving a project. It explains all possible properties, their valid
+value ranges, and the meaning of each value.
+
+The minimum firmware version that supports this format is 2.01
+
+
+Control elements have IDs. 
+The ID consists of two, three or four digits where 
+L = layer 0...7      <-- new in firmware 2.0x: eight layers instead of just two
+X = column 0...7
+Y = row 0...3 (only rotary)
+BB = bank 00...19 (snapshots)
+
+Rotary and Rotbut: LXY
+Mute: LX 
+Fader: LX
+Snapshot: BBXY
+
+
+================================================================================
+ROOT LEVEL
+================================================================================
+
+{
+  "type": "PROJ",                    // MUST be set for Drop to accept the file! File type identifier (always "PROJ")
+  "version": 2.00,                   // MUST be set for Drop to accept the file! JSON format version. The oldest firmware that still understands this JSON file.
+  "versionInstalled": 2.01,          // Optional. The firmware version that created this file
+
+  "state": { ... },                  // Controller position values and PLAY settings - recalled when loading the project
+  "device": { ... },                 // MENU > Devices: MIDI device configuration, including mergers
+  "map": { ... },                    // MENU > Mapping: Control-to-MIDI mapping
+  "chain": { ... },                  // sift + chain menu: Snapshot chains
+  "clk": { ... },                    // shift + clk menu: Clock/timing configuration
+  "grid": { ... },                   // shift + grid: alternative use of the snapshot buttons to play notes on a mini keyboard or use a DAW script for clip launching
+  "layers": { ... },                 // MENU > Layers: Layer naming, and Layer-A/B button behavior <-- This menu is new in Firmware v2.01
+  "cvOut": { ... },                  // MENU > CV Config: CV output configuration. Can be directly mapped to a control element or output clocks and triggers
+  "cvIn": { ... },                   // MENU > CV Config: CV input configuration. Can be used for external clocks or to trigger snapshots
+  "remote": { ... },                 // MENU > Remote: Remote control modes
+  "settings": { ... }                // MENU > Settings; Project settings. 
+                                     // BE AWARE: Settings for Brightness, Keyboard Layout and Autosave are stored in a separate JSON file named globals.json These properties stay the same across projects!
+}
+
+================================================================================
+SECTION: state
+================================================================================
+
+Contains the current values of all controllers.
+When loading a project, the values will be recalled as they were when saving
+
+{
+  "state": {
+    "rotary": {
+      "<ID>": <float>,               // Rotary encoder position (0.0-1.0)  
+      ...
+    },
+    "rotbut": {
+      "<ID>": <float>,               // Rotary button state (0.0-1.0)
+      ...
+    },
+    "mute": {
+      "<ID>": <float>,               // Mute button state (0.0=off, 1.0=on)
+      ...
+    },
+    "fader": {
+      "<ID>": <float>,               // Fader position (0.0-1.0)
+      ...
+    },
+    "bjBars": <int>,                 // PLAY > Length: Nr of bars per cycle (1-32)
+    "bjQuant": <int>,                // PLAY > Quant: Quantize setting for beatjump: 0 = 1BAR, 1 = 1/4th note
+    "jumpQuant": <int>               // PLAY > Quant: Jump quantize setting 0: None, 1: 1/16, 2: 1/8, 3: 1/4, 4: 1/2, 5: 1/1
+  }
+}
+
+================================================================================
+SECTION: device
+================================================================================
+
+Defines MIDI device connections (up to 8 devices allowed, numbered 0-7).
+
+{
+  "device": {
+    "0": {
+      "inUse": <int>,                // 0=disabled, 1=enabled
+      "name": "<string>",            // User-defined device name.   
+      "portOut": <int>,              // MIDI output port
+      "portIn": <int>,               // MIDI input port
+      "cableIdOut": <int>,           // Sub-port index for output (0-15)
+      "cableIdIn": <int>,            // Sub-port index for input (0-15)
+      "preDrop": <int>,              // Pre-delay before DROP trigger
+      "ch": <int>,                   // Default MIDI channel (1-16)
+      "csvInUse": <int>,             // 0=no CSV file, 1=CSV file used
+      "csvPath": "<string>",         // Path to CSV preset file
+      "csvFile": "<string>",         // CSV filename
+      "merge": {
+        "0": {                       // Merger configuration (0-3)
+          "inUse": <int>,            // 0=disabled, 1=enabled
+          "filter": <int>,           // Bitmask of enabled message types
+          "inpDevice": <int>,        // Input device ID (0-7)
+          "targCh": <int>,           // Target channel mode
+          "nGateMode": <int>,        // Note gate mode
+          "nGateLink": "<string>",   // Control linked to note gate
+          "tSemiOn": <int>,          // Semitone transposition enabled (0/1)
+          "tSemiMin": <int>,         // Min semitone value (-48 to +48)
+          "tSemiMax": <int>,         // Max semitone value (-48 to +48)
+          "tSemiLink": "<string>",   // Control linked to semitone  e.g. 123_rotary --> layer 1, third x column, fourth y row from top
+          "tOctOn": <int>,           // Octave transposition enabled (0/1)
+          "tOctMin": <int>,          // Min octave value (-8 to +8)
+          "tOctMax": <int>,          // Max octave value (-8 to +8)
+          "tOctLink": "<string>"     // Control linked to octave
+        },
+        ...
+      }
+    },
+    ...
+  }
+}
+
+name:
+Max length: 15 chars + the \0 terminator
+
+portOut / portIn Values:
+   0 = No output/input
+   1 = USB1
+   2 = USB2
+   3 = TRS1
+   4 = TRS2
+   5 = TRS3
+   6 = TRS4
+
+cableIdOut / cableIdIn Values:
+   0-15 = Sub-port index (for USB multi-cable MIDI devices)
+
+preDrop Values:
+   0 = 0 ms
+   1 = 1/16th note before DROP
+   2 = 2/16th note before DROP
+   3 = 3/16th note before DROP
+   4 = 4/16th note before DROP
+   5 = 50 ms before DROP
+   6 = 100 ms before DROP
+   7 = 150 ms before DROP
+   8 = 200 ms before DROP
+   9 = 250 ms before DROP
+  10 = 300 ms before DROP
+  11 = 350 ms before DROP
+  12 = 400 ms before DROP
+  13 = 450 ms before DROP
+  14 = 500 ms before DROP
+
+targCh (Target Channel Mode) Values:
+   0 = By device (use device's default channel)
+   1-16 = Force channel 1-16
+
+nGateMode (Note Gate Mode) Values:
+   0 = Off (disabled)
+   1 = On  (note gate enabled)
+   2 = On, Inverted (note gate enabled, but inverted)
+   3 = On PB+AT (note gate enabled, also affects pitchbend and aftertouch)
+   4 = On PB+AT Inv (note gate enabled, also affects pitchbend and aftertouch)
+
+nGateLink / tSemiLink / tOctLink Link Format:
+   "none" = Not linked to any control
+   "rotary_LXY" = Linked to rotary encoder
+   "rotbut_LXY" = Linked to rotary button
+   "mute_LX" = Linked to mute button
+   "fader_LX" = Linked to fader
+   ... where L=layer, X=column, Y=row
+
+filter Value:
+   32-bit mask for message types, stored in decimal format. 
+   Example: 1540107 = 0x0017800B = binary 0000 0000 0001 0111 1000 0000 0000 1011
+   // 32-bit: ____ ____ ___m mmmm cccc cccc cccc cccc
+   // m = 5 bits message types  Order: ProgChg, Aftertouch, Pitchbend, BankSel/CC, Notes  HERE: All except for Aftertouch are active
+   // c = 16 bits channel mask. ch16 is MSB (left) and ch1 is LSB (right)                 HERE: channels 1, 2, 4, 16 are active
+
+================================================================================
+SECTION: map
+================================================================================
+
+Defines control-to-MIDI mappings for rotary, rotbut, mute, fader, and snapshots.
+
+{
+  "map": {
+    "rotary": {
+      "040": {                       // Control ID: (layer, X, Y)
+        "name": "<string>",          // User-defined name
+        "colId": <int>,              // Color ID (0-8)
+        "dropOrder": <int>,          // Order in output chain
+        "behavId": <int>,            // Behavior mode
+        "feedbSlotVis": <int>,       // Which slot LED feedback is visible for
+        "feedbId": <int>,            // LED feedback style
+        "feedbSlot": <int>,          // Slot number for feedback value
+        "0": {                       // Slot 1-8 (MIDI mapping) range 0...7
+          "inUse": <int>,            // 0=unused, 1=active
+          "target": <int>,           // Device ID (0-7)
+          "msgType": <int>,          // MIDI message type
+          "ch": <int>,               // MIDI channel (1-16)
+          "csvRef": <int>,           // CSV reference (0=none, 1+=entry)
+          "msgNr": <float>,          // CC/Note/etc number (0.0-127.0)
+          "maxOut": <int>,           // Max output value (0-16383)
+          "minOut": <int>,           // Min output value (0-16383)
+          "curveId": <int>           // Curve/scaling mode
+        },
+        ...                          // Up to 8 slots
+      },
+      ...
+    },
+    "rotbut": { ... },               // Rotary button mappings (same format)
+    "mute": {                        // Mute button mappings
+      "00": {                        // Control ID: (layer, X)
+        "name": "<string>",
+        "colId": <int>,
+        "behavId": <int>,
+        "feedbId": <int>,
+        "0": { ... }                // Data slots
+      },
+      ...
+    },
+    "fader": { ... },               // Fader mappings
+    "snp": {                        // Snapshot mappings
+      "0000": {                     // Snapshot ID: BANK (00...19), X (0...3), Y(0...4): Format is BBXY
+        "name": "<string>",
+        "colId": <int>,
+        "behavId": <int>,
+        "feedbId": <int>,
+        "0": { ... },               // Data slots. Each snapshot has its own eight slots.
+        "data": {                   // Snapshot saved values. Uses the IDs of the control elements like above
+          "rotary": { 
+            "000": 0.50,            // rotary on layer 1, x=0, y=0 is at 50% position
+            "001": 0.75,            // rotary on layer 1, x=0, y=1 is at 75% position
+            ... 
+          },
+          "rotbut": { ... },
+          "mute": { 
+            "45": 1.0,             // mute button on layer 5, button 6th from left, is ON
+            ... 
+          },
+          "fader": { ... }
+        }
+      }
+    }
+  }
+}
+
+colId (Color) Values:
+   0 = Cyan
+   1 = Magenta
+   2 = Amber
+   3 = Spring
+   4 = Gold
+   5 = Turquoise
+   6 = Violet
+   7 = Blue
+   8 = White
+
+behavId (Behavior) Values:
+   0 = Precision
+   1 = Dynamic Pot
+   2 = Dynamic Fast
+   3 = Toggle
+   4 = Temporary
+   5 = Quick Turn
+   6 = Reset Left
+   7 = Reset Mid
+   8 = Reset Right
+   9 = Reset L/R
+  10 = Reset R/L
+  11 = Layer AB dual
+  12 = Layer A only
+
+feedbId (LED Feedback Style) Values:
+   0 = Line unidirectional left to right
+   1 = Line bidirectional from center
+   2 = Dot
+   3-26 = Step modes (2-25 steps)
+  27 = Blank
+  28 = Default 
+  29 = Line unidirectional right to left
+  30 = Hue Color     (color changes based on value)
+  31 = MIDI Level
+  32 = MIDI ClipLED
+  33 = MIDI Color
+
+msgType (MIDI Message Type) Values:
+   0 = Off
+   1 = Note Off
+   2 = Note On
+   3 = CC
+   4 = Poly Aftertouch
+   5 = Pitchbend
+   6 = Aftertouch
+   7 = CC14
+   8 = NRPN
+   9 = Prog Change
+  10 = Prog+Bank
+  11 = SongPos
+  12 = CC14|LSB|first
+
+curveId (Curve/Scaling) Values:
+   0 = Linear
+   1 = Exp- (exponential minus)
+   2 = Exp+ (exponential plus)
+   3 = Lin Half R (linear half right)
+   4 = Exp- Half R
+   5 = Exp+ Half R
+   6 = Lin Half L (linear half left)
+   7 = Exp- Half L
+   8 = Exp+ Half L
+   9-13 = On/Off curves (at 50%, 25%, 75%, 1%, 99% threshold)
+  14-28 = Step modes (3-16 steps)
+  29 = 25 Steps
+  30-33 = Relative modes
+  34 = Flex
+  35 = Feedback only
+
+csvRef
+  A helper to find the line in the corresponding CSV file faster. 
+  Only applies if the mapping was assigned via CSV preset lookup. 
+  Leave this at 0 otherwise!
+
+================================================================================
+SECTION: chain
+================================================================================
+
+Defines preset chains/sequences (up to 20 chains allowed).
+
+{
+  "chain": {
+    "0": {
+      "id": <int>,                   // Chain number (0-19)
+      "name": "<string>",            // User-defined chain name
+      "elements": [
+        <int>,                       // Snapshot bank/sequence numbers
+        ...
+      ]
+    },
+    ...
+  }
+}
+
+================================================================================
+SECTION: clk (Clock/Timing)
+================================================================================
+
+Configuration for MIDI clock, BPM, and timing.
+
+{
+  "clk": {
+    "bpm": <float>,                  // Tempo (30.0-399.0 BPM)
+    "mode": <int>,                   // Clock source mode
+    "deviceId": <int>,               // MIDI device for clock (0-7)
+    "sendUSB1": <int>,               // Clock send mode USB1
+    "sendUSB2": <int>,               // Clock send mode USB2
+    "sendTRS1": <int>,               // Clock send mode TRS1
+    "sendTRS2": <int>,               // Clock send mode TRS2
+    "sendTRS3": <int>,               // Clock send mode TRS3
+    "sendTRS4": <int>,               // Clock send mode TRS4
+    "dlyUSB1": <int>,                // Clock delay for USB1 (ms)
+    "dlyUSB2": <int>,                // Clock delay for USB2 (ms)
+    "dlyTRS1": <int>,                // Clock delay for TRS1 (ms)
+    "dlyTRS2": <int>,                // Clock delay for TRS2 (ms)
+    "dlyTRS3": <int>,                // Clock delay for TRS3 (ms)
+    "dlyTRS4": <int>,                // Clock delay for TRS4 (ms)
+    "dlyCV1": <int>,                 // Clock delay for CV1 (ms)
+    "dlyCV2": <int>,                 // Clock delay for CV2 (ms)
+    "dlyUSB1ck": <int>,              // Clock delay for USB1 (clock counts)
+    "dlyUSB2ck": <int>,              // Clock delay for USB2 (clock counts)
+    "dlyTRS1ck": <int>,              // Clock delay for TRS1 (clock counts)
+    "dlyTRS2ck": <int>,              // Clock delay for TRS2 (clock counts)
+    "dlyTRS3ck": <int>,              // Clock delay for TRS3 (clock counts)
+    "dlyTRS4ck": <int>,              // Clock delay for TRS4 (clock counts)
+    "dlyCV1ck": <int>,               // Clock delay for CV1 (clock counts)
+    "dlyCV2ck": <int>,               // Clock delay for CV2 (clock counts)
+    "maskSubPort1": <int>,           // USB1 sub-port mask
+    "maskSubPort2": <int>,           // USB2 sub-port mask
+    "clkWhileStopped": <int>         // Send clock while stopped (0/1)
+  }
+}
+
+mode (Clock Source) Values:
+   0 = Internal (use local BPM)
+   1 = Ext MIDI USB1
+   2 = Ext MIDI USB2
+   3 = Ext MIDI TRS
+   4 = CV Clock
+
+Send Mode Values:
+   0 = Off (don't send clock)
+   1 = Clock ON, Transp ON, Stop OFF
+   2 = Clock ON, Transp ON, Stop ON
+   3 = Clock ON, Transp OFF, Stop OFF
+
+Delay Values:
+   Range: 0.0 - 100.0 (milliseconds for ms) or 0.0 - 5.0 (clocks for clock units)
+
+bpm Value:
+   Range: 30.0 - 399.0 BPM
+
+================================================================================
+SECTION: grid
+================================================================================
+
+Configuration for grid mode (note grid sequencer).
+
+{
+  "grid": {
+    "target": <int>,                 // Target device (0-7)
+    "mode": <int>,                   // Grid mode
+    "velo": <int>,                   // Note velocity (14-bit value)
+    "ch": <int>,                     // MIDI channel (1-16)
+    "scaleMask": <int>               // Scale/note set bitmask
+  }
+}
+
+Note velocity:
+    7-bit value, but shifted to the left by 7 bits
+
+mode Values:
+   0 = Notes (free note selection)
+   1 = DAW Grid (aligned to DAW)
+
+noteScale Bitmask:
+   Represents 12 semitones (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
+   which can be played via the keyboard.
+   Each bit position represents whether that note is included.
+   Example: 2733 = 0xAAD = 0b 1010 1010 1101
+   = Note 0, 2, 3  5, 7  9, 11   are enabled
+   IMPORTANT: the lowest key (0) is always enabled 
+
+================================================================================
+SECTION: layers
+================================================================================
+
+Defines layer modes and names.
+
+{
+  "layers": {
+    "0": {                           // Layer number (0-7)
+      "modeA": <int>,                // Layer A mode
+      "modeB": <int>,                // Layer B mode
+      "name": "<string>",            // User-defined layer name
+      "colId": <int>                 // Color ID (0-8)
+    },
+    ...
+  }
+}
+
+modeA / modeB Values:
+   0 = No change
+   1 = Previous layer
+   2 = Next layer
+   3 = Shift to Layer 1
+   4 = Shift to Layer 2
+   5 = Shift to Layer 3
+   6 = Shift to Layer 4
+   7 = Shift to Layer 5
+   8 = Shift to Layer 6
+   9 = Shift to Layer 7
+  10 = Shift to Layer 8
+  11 = Select Layer 1
+  12 = Select Layer 2
+  13 = Select Layer 3
+  14 = Select Layer 4
+  15 = Select Layer 5
+  16 = Select Layer 6
+  17 = Select Layer 7
+  18 = Select Layer 8
+
+colId (Color) Values: See map section
+
+================================================================================
+SECTION: cvOut (CV Output)
+================================================================================
+
+Configuration for analog CV outputs (2 outputs available).
+
+{
+  "cvOut": {
+    "0": {                           // CV Output 1
+      "cvOutMode": <int>,            // Signal type for output 1
+      "vMin": <float>,               // Min voltage (0.0-5.0V)
+      "vMax": <float>,               // Max voltage (0.0-5.0V)
+      "link": "<string>"             // Control link (see device mergers)
+    },
+    "1": {                           // CV Output 2
+      "cvOutMode": <int>,            // Signal type for output 2
+      "vMin": <float>,               // Min voltage (0.0-5.0V)
+      "vMax": <float>,               // Max voltage (0.0-5.0V)
+      "link": "<string>"             // Control link
+    }
+  }
+}
+
+cvOutMode (Signal Type) Values:
+   0 = Linked Control (to a control input)
+   1 = 24 PPQN Clock (5ms pulse width)
+   2 = 12 PPQN Clock
+   3 = 8 PPQN Clock
+   4 = 4 PPQN Clock
+   5 = 2 PPQN Clock
+   6 = 16th Clock (50% duty)
+   7 = 8th Clock (50% duty)
+   8 = 4th Clock (50% duty)
+   9 = 1 Bar Clock (50% duty)
+  10 = Start Trigger
+  11 = Is Running Gate
+  12 = Cycle Start Trigger
+  13 = Cycle Position CV
+  14 = Bar Position CV
+  15 = Jump Progress Rise
+  16 = Jump Progress Fall
+  17 = Jump Gate
+  18 = Drop Trigger
+
+Link Format: See device mergers section
+
+================================================================================
+SECTION: cvIn (CV Input)
+================================================================================
+
+Configuration for analog CV inputs (2 inputs available).
+
+{
+  "cvIn": {
+    "0": {                           // CV Input 1
+      "cvInMode": <int>              // Function for CV input 1
+    },
+    "1": {                           // CV Input 2
+      "cvInMode": <int>              // Function for CV input 2
+    }
+  }
+}
+
+cvInMode Values for Input 1 (CV1):
+   0 = 4 PPQN Clock / 16th note
+   1 = 2 PPQN Clock / 8th note
+   2 = JUMP Snapshot trigger/select
+   3 = 24 PPQN Clock
+
+cvInMode Values for Input 2 (CV2):
+   0 = Without Function
+   1 = Start Trigger
+   2 = Start/Stop Gate
+   3 = JUMP Snapshot Select
+
+================================================================================
+SECTION: remote
+================================================================================
+
+Configuration for remote MIDI control.
+
+{
+  "remote": {
+    "levelRx": <int>,                // Remote RX control level
+    "deviceRx": <int>,               // Device receiving remote commands (0-7)
+    "chanRx": <int>,                 // Channel for RX (0=by device, 1-16)
+    "levelTx": <int>,                // Remote TX control level
+    "deviceTx": <int>,               // Device transmitting remote messages
+    "chanTx": <int>,                 // Channel for TX
+    "jumpMidiMode": <int>,           // Jump sequencer mode
+    "jumpMidiNote": <int>,           // Base note for jump sequencer
+    "jumpMidiInstant": <int>,        // Instant on/off (no fade)
+    "jumpMidiDevice": <int>,         // Target device
+    "jumpMidiChan": <int>            // Target channel
+  }
+}
+
+levelRx / levelTx Values:
+   0 = Off
+   1 = Jam (basic control)
+   2 = Dual (extended control)
+   3 = Full (complete control)
+
+jumpMidiMode Values:
+   0 = Off
+   1 = By pitch
+   2 = Velocity 1-127
+   3 = Velocity 1-20
+   4 = Random
+
+================================================================================
+SECTION: settings
+================================================================================
+
+Global application settings.
+
+{
+  "settings": {
+    "dropExcl": <int>,               // Multiple DROPs allowed (0/1)
+    "jumpExcl": <int>,               // Multiple JUMPs allowed (0/1)
+    "jumpDur": <int>,                // Maximum jump duration, set by the potentiometer
+    "sendOnLoad": <int>,             // Send all MIDI after loading a project (0/1)
+    "bankToChain": <int>,            // Bank button triggers chain (0/1)
+    "chainToBank": <int>,            // Chain button triggers bank (0/1)
+    "usb1Role": <int>,               // USB1 port mode
+    "usb2Role": <int>,               // USB2 port mode
+    "showCtrlNames": <int>,          // What to show when moving controls
+    "menuRoot": <int>,               // Menu button returns to root (0/1)
+    "remembSnp": <int>,              // Snapshot memory mode
+    "selGroup": {                    // SAVE > save snapshot: user can select from eight selection groups which control elements are included in the snapshot.
+        "0": {                       // a selection group is like a "preset" of red/green selection of a control element
+            "data": [255, 123, ... ],  // bitmask array of selected control elements, meaning see below!
+            "sgCol": <int>             // color index of the selection group
+        },
+        "1": {...}
+        ...
+        "7": {...}   // There are hard-coded eight selection groups available
+    }
+  }
+}
+
+glob_keybLayout Values:
+   0 = QWERTY
+   1 = QWERTZ
+   2 = AZERTY
+
+showCtrlNames Values:
+   0 = Off (no display)
+   1 = Name & Value
+   2 = Name only
+   3 = Value only
+
+remembSnp Values:
+   0 = Soft Blink
+   1 = No Blink
+
+jumpDur Values:
+   0 = 1 Cycle max
+   1 = 10 Sec max
+   2 = 20 Sec max
+   3 = 30 Sec max
+   4 = 40 Sec max
+   5 = 50 Sec max
+   6 = 60 Sec max
+
+usb1Role / usb2Role (Target Port Mode) Values:
+   0 = Host/Device (auto-detect)
+   1 = Device only, Drop acts strictly as a USB Device on this port
+   2 = Host priority, Drop prioritizes to be host
+
+Exclusive Settings (dropExcl, jumpExcl):
+   0 = Allowed (can run multiple snapshots simultaneously)
+   1 = Not Allowed (only one snapshot at a time)
+
+selGroup data
+   Each layer has 80 control elements: 32 rotary, 32 rotbut, 8 mutes, 8 faders 
+   We have eight layers, so we need to store 8 * 80 = 640 bits as a selGroup to know if a control element is selected or not.
+   "data" contains an array of 8-bit numbers in decimal format (0...255). So a number can store the state of eight control elements.
+   There are 640/8 = 80 numbers in the array treated as bitmasks. 
+
+   The order is as follows: 
+   The first number is the upper row of rotary encoders. 
+   Value 1 = 0x01 = 0b00000001 = only the most left encoder is selected
+   Value 128 = 0x80 = 0b10000000 = only the mostright encoder is selected
+   The second number represents the second row of rotary encoders, and so on.
+   The fifth to eight number represent the rotbut push function of the encoders.
+   The ninth number represents the mute buttons
+   The tenth number represents the faders
+   numbers 11 to 20 are the same for layer 2, numbers 21 to 30 for layer 3, and so on.
+
+
+================================================================================
+DATA TYPES
+================================================================================
+
+<int>     = Integer value (may be constrained to specific range)
+<float>   = Floating-point value with decimal places
+<string>  = Text string (enclosed in quotes)
+<boolean> = 0 or 1 integer (0=false/off, 1=true/on)
+
+================================================================================
+NOTES FOR CUSTOM FILE CREATION
+================================================================================
+
+1. File must be valid JSON format (no comments, proper escaping)
+2. All properties shown in the example should be present, even if empty
+3. Integer values are saved without decimal points (0, 1, not 0.0, 1.0)
+4. Float values must include decimal point (1.0, not 1)
+5. Control IDs must follow the format exactly (3 or 2 character strings)
+6. Device IDs range from 0-7 (8 devices maximum)
+7. MIDI channels are 1-16 in user interface but stored as specified
+8. Values outside documented ranges may be ignored or cause errors
+9. Unknown properties are ignored for forward compatibility
+10. String values must be enclosed in quotes and properly escaped
+
+================================================================================
