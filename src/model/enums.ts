@@ -1,10 +1,11 @@
 // Human labels for Drop enum fields. Observed values + a raw fallback for the rest.
 // (Not exhaustive — the Drop has more behaviors/curves; UI shows "raw N" when unknown.)
 
-// Message type (msgType), decoded from hardware captures (rotary slots + snapshot pads).
+// Message type (msgType). Per the official FW spec (cross-checked with hardware captures).
 export const MSG_TYPE: Record<number, string> = {
-  2: 'Note On', 3: 'CC', 5: 'Pitch bend', 6: 'Aftertouch',
-  7: 'CC14', 8: 'NRPN', 9: 'Program Change', 10: 'Program+Bank', 12: 'CC14 LSB first',
+  0: 'Off', 1: 'Note Off', 2: 'Note On', 3: 'CC', 4: 'Poly Aftertouch',
+  5: 'Pitch bend', 6: 'Aftertouch', 7: 'CC14', 8: 'NRPN',
+  9: 'Program Change', 10: 'Program+Bank', 11: 'SongPos', 12: 'CC14 LSB first',
 }
 
 // A slot's Min/Max is stored as a 14-bit value (0-STORE_MAX) spanning the message type's display
@@ -66,7 +67,7 @@ export const FEEDB: Record<number, string> = {
   10: '9 Steps', 11: '10 Steps', 12: '11 Steps', 13: '12 Steps', 14: '13 Steps', 15: '14 Steps',
   16: '15 Steps', 17: '16 Steps', 18: '17 Steps', 19: '18 Steps', 20: '19 Steps', 21: '20 Steps',
   22: '21 Steps', 23: '22 Steps', 24: '23 Steps', 25: '24 Steps', 26: '25 Steps',
-  27: 'Blank', 29: 'Line from right', 30: 'Hue Color',
+  27: 'Blank', 28: 'Default', 29: 'Line from right', 30: 'Hue Color',
   31: 'MIDI Level', 32: 'MIDI Clip LED',
   33: 'MIDI Col Dot', 34: 'MIDI Col Line from left', 35: 'MIDI Col Line from center', 36: 'MIDI Col Line from right',
 }

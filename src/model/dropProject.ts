@@ -78,8 +78,8 @@ export function readLayers(doc: JsonDoc): LayerView[] {
 
 // ---- selection groups (settings.selGroup.<g>.data: 80 bytes) -------------
 // Each byte is one row of one layer; layout per layer (10 rows):
-//   [rot r1..r4, rotbut r1..r4, mute, fader]. Bit = column, MSB-first
-//   (column 1 = bit 7, column 8 = bit 0), per the device's bitmask convention.
+//   [rot r1..r4, rotbut r1..r4, mute, fader]. Bit = column, LSB-first per the
+//   official FW spec: column 1 (leftmost) = bit 0 (value 1), column 8 = bit 7 (value 128).
 export const NUM_SEL_GROUPS = 8
 
 function rowKindOf(type: ControlType, row: number): number | null {
@@ -93,7 +93,7 @@ function rowKindOf(type: ControlType, row: number): number | null {
 export function selGroupLocation(type: ControlType, layer: number, col: number, row = 0): { index: number; mask: number } | null {
   const rk = rowKindOf(type, row)
   if (rk == null) return null
-  return { index: layer * 10 + rk, mask: 1 << (7 - col) }
+  return { index: layer * 10 + rk, mask: 1 << col }
 }
 
 export function readGroupMember(doc: JsonDoc, group: number, type: ControlType, id: string): boolean {

@@ -274,12 +274,13 @@ describe('per-slot param assign', () => {
 })
 
 describe('selection groups', () => {
-  it('locates a control in the 80-byte mask (layer*10 + rowKind, MSB-first column)', () => {
-    expect(selGroupLocation('rotary', 0, 1, 0)).toEqual({ index: 0, mask: 1 << 6 }) // L0 rot row1 col2
-    expect(selGroupLocation('rotary', 0, 0, 1)).toEqual({ index: 1, mask: 1 << 7 }) // row2 col1
-    expect(selGroupLocation('rotbut', 0, 0, 0)).toEqual({ index: 4, mask: 1 << 7 })
-    expect(selGroupLocation('mute', 1, 0, 0)).toEqual({ index: 18, mask: 1 << 7 })
-    expect(selGroupLocation('fader', 0, 7, 0)).toEqual({ index: 9, mask: 1 << 0 })
+  it('locates a control in the 80-byte mask (layer*10 + rowKind, LSB-first column)', () => {
+    // official spec: column 1 (leftmost) = bit 0 (value 1), column 8 = bit 7 (value 128)
+    expect(selGroupLocation('rotary', 0, 1, 0)).toEqual({ index: 0, mask: 1 << 1 }) // L0 rot row1 col2
+    expect(selGroupLocation('rotary', 0, 0, 1)).toEqual({ index: 1, mask: 1 << 0 }) // row2 col1
+    expect(selGroupLocation('rotbut', 0, 0, 0)).toEqual({ index: 4, mask: 1 << 0 })
+    expect(selGroupLocation('mute', 1, 0, 0)).toEqual({ index: 18, mask: 1 << 0 })
+    expect(selGroupLocation('fader', 0, 7, 0)).toEqual({ index: 9, mask: 1 << 7 })
     expect(selGroupLocation('snp', 0, 0, 0)).toBeNull()
   })
   it('reads membership against the real group-0 mask', () => {
@@ -290,13 +291,13 @@ describe('selection groups', () => {
     expect(readGroupMember(doc, 0, 'mute', '00')).toBe(false)    // index8=0
   })
   it('adds and removes controls from a group, combining bits per row', () => {
-    // add rot 000 (col0→bit7) and 010 (col1→bit6) to group0 → data[0] = 0|128|64 = 192
+    // add rot 000 (col0→bit0=1) and 010 (col1→bit1=2) to group0 → data[0] = 0|1|2 = 3
     const added = setGroupMember(EXP, 0, [{ type: 'rotary', id: '000' }, { type: 'rotary', id: '010' }], true)
-    expect(obj(added).settings.selGroup['0'].data[0]).toBe(192)
+    expect(obj(added).settings.selGroup['0'].data[0]).toBe(3)
     expect(readGroupMember(load(added), 0, 'rotary', '000')).toBe(true)
-    // remove just 000 → data[0] back to 64
+    // remove just 000 → data[0] back to 2 (col1 only)
     const removed = setGroupMember(added, 0, [{ type: 'rotary', id: '000' }], false)
-    expect(obj(removed).settings.selGroup['0'].data[0]).toBe(64)
+    expect(obj(removed).settings.selGroup['0'].data[0]).toBe(2)
   })
 })
 
