@@ -1,11 +1,13 @@
 // Human labels for Drop enum fields. Observed values + a raw fallback for the rest.
 // (Not exhaustive — the Drop has more behaviors/curves; UI shows "raw N" when unknown.)
 
-// Message type (msgType). Per the official FW spec (cross-checked with hardware captures).
+// Message type (msgType). 2/3/5/6/7/8/9/10/12 decoded from hardware captures (rotary slots +
+// snapshot pads); 0/1/4/11 are labels from the firmware JSON spec (not yet capture-verified — they
+// aren't selectable on FW 2.01, and their value encoding is left at the default display range).
 export const MSG_TYPE: Record<number, string> = {
-  0: 'Off', 1: 'Note Off', 2: 'Note On', 3: 'CC', 4: 'Poly Aftertouch',
-  5: 'Pitch bend', 6: 'Aftertouch', 7: 'CC14', 8: 'NRPN',
-  9: 'Program Change', 10: 'Program+Bank', 11: 'SongPos', 12: 'CC14 LSB first',
+  0: 'Off', 1: 'Note Off', 2: 'Note On', 3: 'CC', 4: 'Poly Aftertouch', 5: 'Pitch bend',
+  6: 'Aftertouch', 7: 'CC14', 8: 'NRPN', 9: 'Program Change', 10: 'Program+Bank',
+  11: 'Song Position', 12: 'CC14 LSB first',
 }
 
 // A slot's Min/Max is stored as a 14-bit value (0-STORE_MAX) spanning the message type's display
@@ -60,7 +62,7 @@ export const BEHAV: Record<number, string> = {
 }
 
 // LED ring style (feedbId), rotary-knob turn. Codes are firmware-assigned, not menu order
-// (e.g. "Line from right" = 29). 28 is unused here — it's the feedback id non-rotary elements use.
+// (e.g. "Line from right" = 29). 28 ("Default") is the feedback id non-rotary elements carry.
 export const FEEDB: Record<number, string> = {
   0: 'Line from left', 1: 'Line from center', 2: 'Dot',
   3: '2 Steps', 4: '3 Steps', 5: '4 Steps', 6: '5 Steps', 7: '6 Steps', 8: '7 Steps', 9: '8 Steps',
