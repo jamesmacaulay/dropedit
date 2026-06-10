@@ -170,8 +170,9 @@ mute, fader
 
 So for layer `L`: `byteIndex = L*10 + rowKind`, where `rowKind` is the row (0–3) for a rotary, `4+row`
 for a rotbut, `8` for the mute row, and `9` for the fader row. **Within a byte each column is one bit,
-LSB first**: column 1 (leftmost) = bit 0 (value `1`), … column 8 = bit 7 (value `128`). `255` means all
-8 columns, `0` means none. (8 layers × 10 bytes = 80.)
+LSB first** (hardware-confirmed: a leftmost-only selection stores `1`): column 1 (leftmost) = bit 0
+(value `1`), … column 8 = bit 7 (value `128`). `255` means all 8 columns, `0` means none.
+(8 layers × 10 bytes = 80.)
 
 ## `device` — the 8 MIDI destinations
 
