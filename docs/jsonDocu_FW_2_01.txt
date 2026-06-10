@@ -1,4 +1,14 @@
 ================================================================================
+SOURCE / ATTRIBUTION
+Written and contributed by Thomas Hutmann (Neuzeit Instruments), maker of the
+Drop, and included here with permission as the authoritative reference for the
+Drop project file format. (c) Neuzeit Instruments. Neuzeit maintains this spec
+as the firmware develops -- direct format questions or corrections to Neuzeit.
+(dropedit's docs/drop-format.md carries a few hardware-verified corrections to
+the tables below.)
+================================================================================
+
+================================================================================
 JSON DOCUMENTATION FOR FIRMWARE 2.05
 Drop Controller Project Configuration File Format
 ================================================================================

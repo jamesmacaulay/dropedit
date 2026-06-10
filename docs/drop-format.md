@@ -3,6 +3,12 @@
 The Neuzeit Drop saves each project as a single JSON file. This document describes that file's
 structure — the control mappings, snapshots, device list, and the value encodings used inside them.
 
+> This is a hardware-verified write-up, against **firmware 2.01**. The authoritative spec,
+> [`jsonDocu_FW_2_01.txt`](jsonDocu_FW_2_01.txt), was contributed by Thomas Hutmann (Neuzeit
+> Instruments) and is labelled for firmware 2.05; this document follows it, with a few corrections
+> where the 2.01 hardware disagreed (colour, behaviour, LED-style and curve enums) and the `csvRef`
+> encoding filled in. Later firmware may add or change fields.
+
 ## Top-level keys
 
 A project is one JSON object. Its keys, in the order they appear on disk:

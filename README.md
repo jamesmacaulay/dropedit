@@ -80,3 +80,10 @@ It is vendored verbatim from [pencilresearch/midi](https://github.com/pencilrese
 [`src/data/devices/LICENSE`](src/data/devices/LICENSE) and [`SOURCE.md`](src/data/devices/SOURCE.md).
 If you redistribute that data you must preserve its attribution and license, and any adaptation of it
 must also be CC-BY-SA-4.0.
+
+The Drop **JSON format specification** ([`docs/jsonDocu_FW_2_01.txt`](docs/jsonDocu_FW_2_01.txt)) and
+demo project ([`docs/jsonDemo.json`](docs/jsonDemo.json)) were written and contributed by **Thomas
+Hutmann (Neuzeit Instruments)** and are included with permission; © Neuzeit Instruments. Neuzeit
+maintains the spec as the firmware develops — reach out to them with format questions. dropedit's
+[`docs/drop-format.md`](docs/drop-format.md) is a separate write-up of the project format based on reverse-
+engineering from projects created on the hardware.
