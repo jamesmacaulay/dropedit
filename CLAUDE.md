@@ -128,15 +128,23 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
 - **Snapshot editing** is complete: Save (selection-group-aware), Edit (membership + per-control
   stored values + the snapshot's own **one-shot MIDI output slots**, reusing SlotList /
   `setSlotField` / `addSlot` on type `'snp'`), and Jump/Load. A snapshot's output slots get inserted
-  after its `data` scene in the entry and that layout isn't hardware-verified — confirm on a real Drop.
+  **before** its `data` scene in the entry — hardware-confirmed (the Drop writes them there too).
 - The full pencilresearch/midi DB (~393 devices) is bundled and lazy-loaded; refresh by bumping the
   pinned commit in `scripts/sync-midi-db.mjs` and re-running it. CSVs are verbatim, so any upstream
   typos ship as-is — fix them upstream, not locally, to keep the sync clean. (Note: a CSV fix upstream
   can break the presetDb tests, which assert on specific param names/rows — update those alongside.)
 - **Hardware status:** projects exported by the app are used on real Drop hardware (control
-  mappings, output slots, values, snapshots save/jump/load, decoded enums all confirmed in practice).
-  One narrow bit remains unconfirmed on hardware: the placement of a snapshot's own output slots (added in the snapshot
-  Edit work, inserted after `data`; not yet hardware-tested). Still: encourage keeping backups.
+  mappings, output slots, values, snapshots save/jump/load, decoded enums, snapshot output-slot
+  placement, and the 15-char name cap all confirmed in practice). Still: encourage keeping backups.
+- **FW 2.05 spec vs the app** (`docs/jsonDocu_FW_2_01.txt`, untracked in the main checkout): the doc is
+  for an unreleased firmware and is wrong in several tables — colId (it lists 9 cyan-first; reality is
+  12 amber-first), behavId 11 (it says "Layer AB dual"; the device shows "One per Layer"), feedbId
+  33–36 (it collapses the four "MIDI Col" variants into one "MIDI Color"), and the curveId tail (it's
+  off by one from 25 Steps up — real: 25 Steps=28, Flex=33, Feedback Only=34). The app's decoded values
+  win. The doc was *right* about the 15-char name cap and that snapshot slots precede `data`. Its
+  msgType additions (0 Off, 1 Note Off, 4 Poly Aftertouch, 11 Song Position) are labelled in `enums.ts`
+  but **not capture-verified** — they aren't selectable on FW 2.01. Re-verify open items with
+  `node scripts/capture-open.mjs instructions` / `decode <file>`.
 
 ## Conventions
 

@@ -97,11 +97,11 @@ export function slotParamRow(device: PresetDevice | null, msgType: number, csvRe
   return ccMatches.length === 1 ? ccMatches[0].rowIndex : null
 }
 
-// Derive a Drop control name (<=16 chars) from a preset param's category + name, fitting as much
-// of each as possible. Drop caps any name at 16 chars. We progressively condense: truncate each
-// word to 3 chars (`shorten`), then keep only first+last word (`extraShorten`), trying the
-// least-aggressive combination that fits. The final fallback (both extra-shortened) is at most
-// "xxx xxx xxx xxx" = 15 chars, so the result is always <=16.
+// Derive a Drop control name (<=15 chars) from a preset param's category + name, fitting as much
+// of each as possible. Drop caps any name at 15 chars (16-byte buffer incl. the NUL terminator).
+// We progressively condense: truncate each word to 3 chars (`shorten`), then keep only first+last
+// word (`extraShorten`), trying the least-aggressive combination that fits. The final fallback
+// (both extra-shortened) is at most "xxx xxx xxx xxx" = 15 chars, so the result is always <=15.
 const shortenedWords = (s: string): string[] => s.split(' ').filter((w) => w !== '').map((w) => w.slice(0, 3))
 const shorten = (s: string): string => shortenedWords(s).join(' ')
 const extraShorten = (s: string): string => {
@@ -128,7 +128,7 @@ export function deriveControlName(category: string, name: string): string {
     joinName(extraShorten(cat), param),
     joinName(extraShorten(cat), shorten(param)),
   )
-  for (const c of candidates) if (c.length <= 16) return c
+  for (const c of candidates) if (c.length <= 15) return c
   return joinName(extraShorten(cat), extraShorten(param))
 }
 

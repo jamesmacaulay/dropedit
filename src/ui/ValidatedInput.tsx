@@ -75,11 +75,13 @@ export function ValidatedInput({ value, onCommit, validate, allowEmpty = false, 
 // ---- validators: each takes the field's display name, returns a full message or null when valid. ----
 //      Called only for non-empty input (empty is handled by the component).
 
-// Drop names: up to 16 chars from a fixed set; empty is allowed (a control can be unnamed).
+// Drop names: up to 15 chars from a fixed set; empty is allowed (a control can be unnamed).
+// (The name buffer is 16 bytes — 15 chars + a NUL terminator — and the hardware truncates a 16th
+// char, confirmed by capture, so we cap at 15 to match what the device will actually store.)
 const NAME_CHARS = /^[A-Za-z0-9()&!.+\- ]*$/
 export function validateName(label: string) {
   return (raw: string): string | null => {
-    if (raw.length > 16) return `${label} must be 16 characters or fewer`
+    if (raw.length > 15) return `${label} must be 15 characters or fewer`
     if (!NAME_CHARS.test(raw)) return `${label} can only use letters, numbers, spaces and ( ) & ! . + -`
     return null
   }

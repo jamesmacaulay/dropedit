@@ -3,7 +3,7 @@
 // The UI re-parses the returned text for its live view.
 import {
   parseJson, getObject, getMember, getPath, applyEdits,
-  editSetScalar, editInsertMember, editRemoveMember,
+  editSetScalar, editInsertMember, editInsertMemberBefore, editRemoveMember,
   type JsonDoc, type ScalarNode, type ObjectNode, type Edit,
 } from './jsonDoc'
 import {
@@ -249,7 +249,12 @@ export function addSlot(text: string, type: ControlType, id: string, slotKey: st
     `${t}"curveId": ${slot.curveId}`,
     `${'\t'.repeat(tabs - 1)}}`,
   ].join('\n')
-  return applyEdits(text, [editInsertMember(text, ctrl, slotKey, value)])
+  // A snapshot keeps its stored scene in a trailing `data` member; the hardware writes a snapshot's
+  // own output slots *before* `data`, so insert there rather than appending after it.
+  const edit = getMember(ctrl, 'data')
+    ? editInsertMemberBefore(text, ctrl, slotKey, value, 'data')
+    : editInsertMember(text, ctrl, slotKey, value)
+  return applyEdits(text, [edit])
 }
 
 export function removeSlot(text: string, type: ControlType, id: string, slotKey: string): string {

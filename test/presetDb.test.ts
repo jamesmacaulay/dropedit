@@ -86,7 +86,7 @@ describe('presetDb', () => {
   })
 
   describe('deriveControlName', () => {
-    const within16 = (s: string) => expect(s.length).toBeLessThanOrEqual(16)
+    const within15 = (s: string) => expect(s.length).toBeLessThanOrEqual(15)
 
     it('keeps the full "Category Name" only when the category is short (<8 chars)', () => {
       expect(deriveControlName('Delay', 'Amount')).toBe('Delay Amount')
@@ -100,14 +100,14 @@ describe('presetDb', () => {
     it('shortens the category first, then the name', () => {
       // "Arp Octave Spread" (17) still too long → shorten both
       expect(deriveControlName('Arpeggiator', 'Octave Spread')).toBe('Arp Oct Spr')
-      // category shortened is enough on its own
-      expect(deriveControlName('Low Frequency Osc', 'Rate')).toBe('Low Fre Osc Rate')
+      // "Low Fre Osc Rate" is 16, one over the 15 cap → the name shortens too
+      expect(deriveControlName('Low Frequency Osc', 'Rate')).toBe('Low Fre Osc Rat')
     })
 
     it('falls back to first+last words when shortening is not enough', () => {
       const out = deriveControlName('Voltage Controlled Filter', 'Resonance Amount Level')
       expect(out).toBe('Vol Fil Res Lev')
-      within16(out)
+      within15(out)
     })
 
     it('drops the category when it is a prefix of the param name', () => {
@@ -119,7 +119,8 @@ describe('presetDb', () => {
 
     it('keeps the category when it only partially matches the start of a word (not a whole-word prefix)', () => {
       // "Pan" starts the string "Panic" but isn't a whole word there → category is kept, not dropped
-      expect(deriveControlName('Pan', 'Panic button')).toBe('Pan Panic button')
+      // ("Pan Panic button" is 16, over the cap, so both parts condense — the kept category is the lead "Pan")
+      expect(deriveControlName('Pan', 'Panic button')).toBe('Pan Pan but')
     })
 
     it('handles an empty category (no leading space)', () => {
@@ -127,9 +128,9 @@ describe('presetDb', () => {
       expect(deriveControlName('', 'Octave Spread Amount')).toBe('Oct Spr Amo')
     })
 
-    it('always stays within 16 chars', () => {
-      within16(deriveControlName('Voltage Controlled Oscillator', 'Pulse Width Modulation Depth'))
-      within16(deriveControlName('Synthesizer Engine Section', 'Filter Envelope Decay Time'))
+    it('always stays within 15 chars', () => {
+      within15(deriveControlName('Voltage Controlled Oscillator', 'Pulse Width Modulation Depth'))
+      within15(deriveControlName('Synthesizer Engine Section', 'Filter Envelope Decay Time'))
     })
   })
 })

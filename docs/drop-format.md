@@ -50,7 +50,7 @@ that digit.
 
 ```jsonc
 "100": {
-  "name": "Delay Amount",   // display name
+  "name": "Delay Amount",   // display name (max 15 chars; the buffer is 16 bytes incl. a NUL)
   "colId": 8,               // colour index (0–11)
   "dropOrder": 0,           // position in the DROP output order
   "behavId": 1,             // physical behaviour (see Enums)
@@ -131,7 +131,8 @@ row 75) → `0x6D80004B`; Master level (CC 7, row 57) → `0x43800039`.
 A snapshot is a global pad that stores a "scene". Pads are arranged in banks of 4 columns × 5 rows.
 A snapshot entry has the same chrome fields as a control (`name`, `colId`, `behavId`, `feedb…`), up to
 8 output slots (`"0"`…`"7"`, identical in shape to a control slot — this is where snapshot-only
-**Program Change / Program+Bank** messages live), and a `data` object holding the stored scene:
+**Program Change / Program+Bank** messages live), and a `data` object holding the stored scene. The
+output slots come **before** `data` in the entry:
 
 ```jsonc
 "data": { "rotary": { "100": 0.5, ... }, "rotbut": {...}, "mute": {...}, "fader": {...} }

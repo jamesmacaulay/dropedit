@@ -242,6 +242,9 @@ describe('editing a snapshot scene (setSnapshotValue / membership)', () => {
     expect(j.map.snp['0000']['0']).toMatchObject({ inUse: 1, msgType: 9, maxOut: 5 })
     expect(readControl(load(t), 'snp', '0000')!.slots[0]).toMatchObject({ key: '0', msgType: 9 })
     expect(j.map.snp['0000'].data.rotary['030']).toBeCloseTo(0.19958) // stored scene untouched
+    // hardware writes a snapshot's own output slots BEFORE its `data` scene — match that layout
+    const entry = t.slice(t.indexOf('"0000"'))
+    expect(entry.indexOf('"0":')).toBeLessThan(entry.indexOf('"data":'))
   })
 })
 

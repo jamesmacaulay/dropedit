@@ -180,6 +180,18 @@ export function editInsertMember(text: string, obj: ObjectNode, key: string, val
   return { start: last.span.end, end: last.span.end, text: `,${lead}${memberText}` }
 }
 
+/** Like editInsertMember, but places the new member immediately before an existing `beforeKey`
+ *  (falling back to an append if that key is absent). Used so a snapshot's output slots land before
+ *  its `data` scene, matching how the hardware writes them. */
+export function editInsertMemberBefore(text: string, obj: ObjectNode, key: string, valueText: string, beforeKey: string): Edit {
+  const idx = obj.members.findIndex((m) => m.key === beforeKey)
+  if (idx < 0 || obj.members.length === 0) return editInsertMember(text, obj, key, valueText)
+  const memberText = `${JSON.stringify(key)}: ${valueText}`
+  const target = obj.members[idx]
+  const lead = newlineLeadBefore(text, target.span.start) || '\n'
+  return { start: target.span.start, end: target.span.start, text: `${memberText},${lead}` }
+}
+
 /** Remove a member by key (handles commas + leading whitespace; empties → `{}`). */
 export function editRemoveMember(text: string, obj: ObjectNode, key: string): Edit | null {
   const idx = obj.members.findIndex((m) => m.key === key)
