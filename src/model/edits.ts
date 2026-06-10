@@ -531,6 +531,8 @@ export interface CopiedControl {
   dRow: number
   /** the control's map value text, or null if that selected position was empty (paste clears dest) */
   valueText: string | null
+  /** the control's live `state` value (0-1), or null if it has none / N/A (e.g. snapshots) */
+  stateValue?: number | null
 }
 
 export interface SelectedControl {
@@ -539,7 +541,7 @@ export interface SelectedControl {
 }
 
 type GridPos = { col: number; row?: number }
-type PasteTarget = { type: ControlType; id: string; valueText: string | null }
+type PasteTarget = { type: ControlType; id: string; valueText: string | null; stateValue?: number | null }
 
 const rowOf = (p: GridPos) => p.row ?? 0
 
@@ -566,8 +568,9 @@ function applyPasteTargets(text: string, targets: PasteTarget[]): string {
     const curText = m ? cur.slice(m.value.span.start, m.value.span.end) : null
     if (t.valueText == null) {
       if (curText != null) cur = removeControl(cur, t.type, t.id) // clear an emptied position
-    } else if (curText !== t.valueText) {
-      cur = pasteControl(cur, t.type, t.id, t.valueText) // skip when already identical (no-op)
+    } else {
+      if (curText !== t.valueText) cur = pasteControl(cur, t.type, t.id, t.valueText) // skip identical map (no-op)
+      if (t.stateValue != null) cur = setStateValue(cur, t.type, t.id, t.stateValue) // carry the live value
     }
   }
   return cur
@@ -585,11 +588,13 @@ export function copyControls(text: string, sel: SelectedControl[]): CopiedContro
     for (const id of sel.filter((s) => s.type === type).map((s) => s.id)) {
       const p = parseControlId(type, id)
       const m = obj && getMember(obj, id)
+      const sv = scalarAt(doc, ['state', type, id])
       out.push({
         type,
         dCol: p.col - anchor.col,
         dRow: rowOf(p) - anchor.row,
         valueText: m ? text.slice(m.value.span.start, m.value.span.end) : null,
+        stateValue: sv ? (sv.value as number) : null,
       })
     }
   }
@@ -612,7 +617,7 @@ export function pasteControls(text: string, clip: CopiedControl[], destSel: Sele
     const src = clip[0]
     if (src.valueText == null) return text
     for (const d of destSel) {
-      if (d.type === src.type) targets.push({ type: d.type, id: d.id, valueText: src.valueText })
+      if (d.type === src.type) targets.push({ type: d.type, id: d.id, valueText: src.valueText, stateValue: src.stateValue })
     }
   } else {
     const anchor = anchorOf(positionsOf(destSel))
@@ -623,7 +628,7 @@ export function pasteControls(text: string, clip: CopiedControl[], destSel: Sele
       if (col < 0 || col >= COLS) continue
       if (hasRow(e.type) && (row < 0 || row >= ROWS)) continue
       const id = formatControlId({ type: e.type, layer, col, row: hasRow(e.type) ? row : undefined })
-      targets.push({ type: e.type, id, valueText: e.valueText })
+      targets.push({ type: e.type, id, valueText: e.valueText, stateValue: e.stateValue })
     }
   }
   return applyPasteTargets(text, targets)

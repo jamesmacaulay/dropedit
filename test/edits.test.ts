@@ -335,6 +335,16 @@ describe('multi-control copy / paste (positional)', () => {
     expect(clip.find((c) => c.dCol === 0 && c.dRow === 1)!.valueText).toContain('"RATE"')
   })
 
+  it('carries each control\'s live value (state) through copy/paste', () => {
+    // 000 has state 0.49257; 150 is empty. Paste the column block onto layer-1 anchor 150.
+    const clip = copyControls(EXP, sel('rotary:000', 'rotary:001', 'rotary:002', 'rotary:003', 'fader:00'))
+    expect(clip.find((c) => c.dCol === 0 && c.dRow === 0)!.stateValue).toBeCloseTo(0.49257)
+    const out = obj(pasteControls(EXP, clip, sel('rotary:150'), 1))
+    expect(out.state.rotary['150']).toBeCloseTo(0.49257) // value rode along
+    expect(out.state.fader['15']).toBeCloseTo(0.49928)
+    expect(out.state.rotary['000']).toBeCloseTo(0.49257) // source value intact
+  })
+
   it('anchors the whole multi-type block to a single destination control', () => {
     // copy column 0: rotaries rows 0-3 + the fader. Paste onto a single rotary anchor.
     const clip = copyControls(EXP, sel('rotary:000', 'rotary:001', 'rotary:002', 'rotary:003', 'fader:00'))

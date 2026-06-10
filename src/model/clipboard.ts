@@ -23,6 +23,8 @@ export function parseClip(textIn: string | undefined | null): { kind: ClipKind; 
     const c = it as Partial<CopiedControl>
     return !!c && typeof c.type === 'string' && typeof c.dCol === 'number' && typeof c.dRow === 'number'
       && (c.valueText === null || typeof c.valueText === 'string')
+      // stateValue is optional (older payloads omit it); when present it must be a number or null
+      && (c.stateValue === undefined || c.stateValue === null || typeof c.stateValue === 'number')
   })
   return ok ? { kind: j.kind, items: j.items as CopiedControl[] } : null
 }
