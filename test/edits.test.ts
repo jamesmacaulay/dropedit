@@ -102,6 +102,16 @@ describe('create / remove', () => {
     expect(c).toMatchObject({ name: 'X', colId: 3, behavId: 1 })
     expect(c['0']).toBeUndefined() // no slot — active but no MIDI output yet
   })
+  it('seeds a newly-active control with a live value of 0', () => {
+    const out = createControl(EXP, 'rotary', '100', { name: 'X', colId: 3 }, false) // 100 has no prior state
+    expect(obj(out).state.rotary['100']).toBe(0)
+    expect(readStateValue(load(out), 'rotary', '100')).toBe(0)
+  })
+  it('does not clobber an existing live value when re-creating a control', () => {
+    let t = setStateValue(EXP, 'rotary', '100', 0.7)
+    t = createControl(t, 'rotary', '100', { name: 'X', colId: 3 }, false)
+    expect(obj(t).state.rotary['100']).toBe(0.7)
+  })
 })
 
 describe('layer + channel ops', () => {

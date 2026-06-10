@@ -139,7 +139,11 @@ export function createControl(text: string, type: ControlType, id: string, init:
   if (!obj) return text
   const memberTabs = memberKeyTabs(cur, obj) + 1
   const valueText = buildControlValue(type, init, memberTabs, withSlot)
-  return applyEdits(cur, [editInsertMember(cur, obj, id, valueText)])
+  const hasState = scalarAt(doc, ['state', type, id]) != null
+  cur = applyEdits(cur, [editInsertMember(cur, obj, id, valueText)])
+  // a newly-active control gets a default live value of 0 (unless it already has a state entry)
+  if (!hasState) cur = setStateValue(cur, type, id, 0)
+  return cur
 }
 
 // ---- assign a CSV param --------------------------------------------------
