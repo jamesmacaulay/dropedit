@@ -9,6 +9,7 @@ import type { PresetDevice } from '../model/presetDb'
 import { paramLabel, deriveControlName, slotParamRow, makeCsvRef } from '../model/presetDb'
 import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
+  MSG_TYPE_BY_KIND, BEHAV_BY_KIND, FEEDB_BY_KIND, CURVE_BY_KIND, allowedFor,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
   PROGRAM_TYPES, unpackBank, packBank,
 } from '../model/enums'
@@ -169,6 +170,8 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const behavId = shared(active, (t) => t.view!.behavId)
   const feedbId = shared(active, (t) => t.view!.feedbId)
   const stateVal = shared(active, (t) => readStateValue(doc, t.type, t.id))
+  // valid behavior / LED options depend on the selected control type(s)
+  const ctrlKinds = [...new Set(active.map((t) => t.type as string))]
 
   const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v), true)
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))
@@ -202,7 +205,7 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
                   <ValidatedInput value={name === MULTI ? '' : (name as string ?? '')} placeholder={name === MULTI ? '[multiple values]' : ''} allowEmpty validate={validateName('Name')} onCommit={(raw) => onName(raw)} />
                 </label>
                 <label>Value<ValidatedInput inputMode="decimal" value={stateVal === MULTI || stateVal === undefined ? '' : String(stateVal)} placeholder={stateVal === MULTI ? '[multiple]' : 'unset'} validate={validateNum('Value', 0, 1)} onCommit={(raw) => onStateVal(Number(raw))} /></label>
-                <EnumField key={`behav-${selection.join('|')}`} label="Behavior" map={BEHAV}
+                <EnumField key={`behav-${selection.join('|')}`} label="Behavior" map={BEHAV} allow={allowedFor(BEHAV_BY_KIND, ctrlKinds)}
                   value={behavId === MULTI || behavId === undefined ? undefined : (behavId as number)} multi={behavId === MULTI}
                   onSet={(v) => onField('behavId', v)} />
                 <label>Color
@@ -211,7 +214,7 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
                     {COLOR_NAMES.map((nm, i) => <option key={i} value={i}>[{i}] {nm}</option>)}
                   </select>
                 </label>
-                <EnumField key={`feedb-${selection.join('|')}`} label="LED style" map={FEEDB}
+                <EnumField key={`feedb-${selection.join('|')}`} label="LED style" map={FEEDB} allow={allowedFor(FEEDB_BY_KIND, ctrlKinds)}
                   value={feedbId === MULTI || feedbId === undefined ? undefined : (feedbId as number)} multi={feedbId === MULTI}
                   onSet={(v) => onField('feedbId', v)} />
               </div>
@@ -307,6 +310,8 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   const paramOf = (s: SlotView) => slotParamRow(device, s.msgType, s.csvRef, s.msgNr)
   const paramShared = slots.every((s) => paramOf(s) === paramOf(slots[0])) ? paramOf(slots[0]) : null
   const msgType = sh('msgType')
+  // valid message-type / curve options depend on the slot's control type(s)
+  const slotKinds = [...new Set(entries.map((e) => e.type as string))]
 
   const num = (labelTxt: string, field: keyof SlotView, range?: { min: number; max: number }) => {
     const v = sh(field)
@@ -384,7 +389,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   const correctCsvRef = (e: { slot: SlotView }) => {
     const dev = deviceFor(e.slot.target)
     const row = slotParamRow(dev, e.slot.msgType, e.slot.csvRef, e.slot.msgNr)
-    return row != null && dev ? makeCsvRef(row, dev.byRowIndex.get(row)?.cc ?? 0) : null
+    return row != null && dev ? makeCsvRef(row, dev.byRowIndex.get(row)?.cc ?? 0, e.slot.target) : null
   }
   // ↻ stamps csvRef from the detected preset (disabled when there's nothing to stamp / it'd be a no-op);
   // ✕ clears it to 0. Both write csvRef directly, so they skip the "clear on manual edit" rule in `set`.
@@ -405,7 +410,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     <div className="slot-fields">
       {sel('Target device', 'target', devices.map((d) => <option key={d.index} value={d.index}>{d.index}: {d.name || '—'}</option>))}
       {num('Channel', 'ch', { min: 1, max: 16 })}
-      <EnumField key={`type-${idKey}`} label="Message Type" map={MSG_TYPE}
+      <EnumField key={`type-${idKey}`} label="Message Type" map={MSG_TYPE} allow={allowedFor(MSG_TYPE_BY_KIND, slotKinds)}
         value={msgType === MULTI ? undefined : (msgType as number)} multi={msgType === MULTI}
         onSet={(v) => set('msgType', v)} />
       {paramPicker}
@@ -413,7 +418,7 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       {/* msgNr is the note/CC number for normal types; for program types it's hidden (Program+Bank's
           two bank values live there, edited via the Bank fields below). */}
       {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
-      <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE}
+      <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE} allow={allowedFor(CURVE_BY_KIND, slotKinds)}
         value={curveId === MULTI ? undefined : (curveId as number)} multi={curveId === MULTI}
         onSet={(v) => set('curveId', v, true)} />
       {valueUniform

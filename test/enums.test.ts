@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { storedToDisplay, displayToStored, unpackXY, packXY, unpackBank, packBank, STORE_MAX } from '../src/model/enums'
+import { storedToDisplay, displayToStored, unpackXY, packXY, unpackBank, packBank, STORE_MAX,
+  allowedFor, MSG_TYPE_BY_KIND, BEHAV_BY_KIND, CURVE_BY_KIND } from '../src/model/enums'
 
 // Slot Min/Max are stored as a 14-bit value over the message type's display range
 // (verified by hardware capture). msgType codes: 3=CC (0-127), 7=CC14 (0-16383), 5=Pitch bend (±8192).
@@ -34,6 +35,26 @@ describe('Flex curve XY packing', () => {
     expect(packXY(90, 100)).toBe(11620) // captured XY2 (90,100)
     expect(unpackXY(1300)).toEqual({ x: 10, y: 20 })
     expect(unpackXY(11620)).toEqual({ x: 90, y: 100 })
+  })
+})
+
+describe('per-control-type option subsets (allowedFor)', () => {
+  it('restricts to a single kind’s options', () => {
+    // rotaries are linear: CC family + PB + AT, but never Note On (2)
+    expect(allowedFor(MSG_TYPE_BY_KIND, ['rotary'])).not.toContain(2)
+    // buttons are binary: Note On is allowed
+    expect(allowedFor(MSG_TYPE_BY_KIND, ['rotbut'])).toContain(2)
+    // buttons only get On/Off-50 (9) or Feedback-Only (34) curves
+    expect(allowedFor(CURVE_BY_KIND, ['mute'])).toEqual([9, 34])
+  })
+  it('intersects across a mixed selection', () => {
+    // rotary+mute share the linear msgTypes minus Note On (mute has it, rotary doesn’t)
+    expect(allowedFor(MSG_TYPE_BY_KIND, ['rotary', 'mute'])).not.toContain(2)
+  })
+  it('returns null when kinds have no common option, so the field stays unrestricted', () => {
+    // rotary behaviors (0-2) and fader behaviors (11,12) are disjoint
+    expect(allowedFor(BEHAV_BY_KIND, ['rotary', 'fader'])).toBeNull()
+    expect(allowedFor(BEHAV_BY_KIND, [])).toBeNull()
   })
 })
 

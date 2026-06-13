@@ -105,3 +105,52 @@ export const CONTROL_DEFAULTS: Record<string, ControlDefaults> = {
   mute: { behavId: 4, feedbId: 28, feedbSlot: 1, slot: { msgType: 2, ch: 2, curveId: 9 } },
   rotbut: { behavId: 5, feedbId: 28, feedbSlot: 0, slot: null },
 }
+
+// ---- per-control-type valid option subsets -------------------------------------------------------
+// Not every enum value is offered for every control type. These mirror Neuzeit's firmware valList_*
+// arrays (rotary/fader = linear, rotbut/mute = binary, snp = snapshot). The full label maps above
+// still name every value; these only gate which options a dropdown OFFERS. EnumField also always
+// keeps a control's current value selectable, so existing/older data is never hidden.
+const STEP_CURVES = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28] // 3..16 Steps, 25 Steps
+
+export const MSG_TYPE_BY_KIND: Record<string, number[]> = {
+  rotary: [3, 7, 12, 8, 5, 6],            // CC, CC14, CC14-LSB, NRPN, PB, AT
+  fader: [3, 7, 12, 8, 5, 6],
+  rotbut: [3, 7, 12, 8, 2, 5, 6],         // + Note On (buttons)
+  mute: [3, 7, 12, 8, 2, 5, 6],
+  snp: [2, 3, 7, 12, 8, 5, 6, 9, 10],     // + Program Change / Program+Bank
+}
+export const BEHAV_BY_KIND: Record<string, number[]> = {
+  rotary: [0, 1, 2],
+  rotbut: [3, 4, 5, 6, 7, 8, 9, 10],
+  mute: [3, 4],
+  fader: [11, 12],
+  snp: [4],
+}
+export const CURVE_BY_KIND: Record<string, number[]> = {
+  rotary: [0, 1, 2, 3, 4, 5, 6, 7, 8, 33, 9, 10, 11, 12, 13, ...STEP_CURVES, 29, 30, 31, 32, 34],
+  fader: [0, 1, 2, 3, 4, 5, 6, 7, 8, 33, 9, 10, 11, 12, 13, ...STEP_CURVES, 34], // no relative modes
+  rotbut: [9, 34],  // binary: On/Off-50 or Feedback-Only
+  mute: [9, 34],
+  snp: [9, 34],
+}
+// Rotaries get every line/dot/step + hue + MIDI style (all but Default=28); binary/fader controls
+// get Default + the MIDI-driven styles only.
+const FEEDB_BINARY = [28, 31, 32, 33, 34, 35, 36]
+export const FEEDB_BY_KIND: Record<string, number[]> = {
+  rotary: Object.keys(FEEDB).map(Number).filter((n) => n !== 28),
+  rotbut: FEEDB_BINARY,
+  mute: FEEDB_BINARY,
+  fader: FEEDB_BINARY,
+  snp: FEEDB_BINARY,
+}
+
+/** The option values shared by ALL the given control kinds (intersection). Returns null when the
+ *  kinds have no common option (e.g. a rotary+fader behavior selection) — the caller then leaves the
+ *  dropdown unrestricted rather than showing an empty list. */
+export function allowedFor(byKind: Record<string, number[]>, kinds: string[]): number[] | null {
+  const sets = kinds.map((k) => byKind[k]).filter(Boolean)
+  if (!sets.length) return null
+  const inter = sets.reduce((acc, s) => acc.filter((n) => s.includes(n)))
+  return inter.length ? inter : null
+}
