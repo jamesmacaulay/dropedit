@@ -121,10 +121,13 @@ uses `base: './'` so assets resolve under the `/dropedit/` Pages subpath.
   `decode <file.json>` and update the maps. Still raw numbers: `msgType` is partially mapped
   (`MSG_TYPE`); the Flex curve's XY-point storage is unknown (its slot keeps default min/max until
   the points are edited — capture a non-default Flex to locate it).
-- **`csvRef` — fully solved** (hardware capture, `scripts/decode-csvref.mjs`):
-  `csvRef = 0x40000000 | (cc << 23) | rowIndex` (bit 30 = valid-reference flag, bits 23-29 = CC,
-  low 16 = CSV row index). No checksum; renaming doesn't change it. `presetDb.makeCsvRef(row, cc)`
-  writes it; a manual edit of a slot's identity clears it to 0 (per the firmware docs).
+- **`csvRef` — solved** (confirmed against Neuzeit's firmware source, `Slot::csvStamp_build`):
+  `csvRef = (msgId<<30) | (msgNr<<23) | (msgNrLsb<<16) | (devId<<12) | lineNr` — msgId 0=none/1=CC/
+  2=CC14/3=NRPN (0 ⇒ Drop ignores the ref), msgNr=CC, devId=target device (bits 12-15), lineNr=CSV
+  row (low **12** bits). No checksum; renaming doesn't change it. `presetDb.makeCsvRef(row, cc, devId?,
+  msgType?, ccLsb?)` writes it (assignParam/setSlotParam pass the slot's target as devId); reads mask
+  `& 0xfff` for the row. NB our earlier capture-only formula (`0x40000000 | cc<<23 | row & 0xffff`) was
+  right *only for device 0* — it dropped devId and over-read the row for non-zero targets.
 - **Snapshot editing** is complete: Save (selection-group-aware), Edit (membership + per-control
   stored values + the snapshot's own **one-shot MIDI output slots**, reusing SlotList /
   `setSlotField` / `addSlot` on type `'snp'`), and Jump/Load. A snapshot's output slots get inserted

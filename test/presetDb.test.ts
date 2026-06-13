@@ -34,18 +34,26 @@ describe('presetDb', () => {
     expect(dev.params.length).toBeGreaterThan(100)
   })
 
-  it('csvRef = flag | (cc<<23) | rowIndex (hardware-verified, scripts/decode-csvref.mjs)', () => {
-    // exact 32-bit values from the hardware capture
+  it('csvRef = (msgId<<30)|(msgNr<<23)|(msgNrLsb<<16)|(devId<<12)|lineNr (firmware-authoritative)', () => {
+    // device 0, CC: matches the original hardware capture exactly
     expect(makeCsvRef(15, 52)).toBe(0x5a00000f) // Delay / Amount
     expect(makeCsvRef(16, 53)).toBe(0x5a800010) // Delay / Rate
     expect(makeCsvRef(75, 91)).toBe(0x6d80004b) // Reverb / Reverb amount
     expect(makeCsvRef(46, 81)).toBe(0x6880002e) // High-pass filter / Frequency
     expect(makeCsvRef(57, 7)).toBe(0x43800039)  // Master / Master level
-    // field layout: low 16 = row, bits 23-29 = cc, bit 30 set
+    // field layout: low 12 = lineNr, bits 12-15 = devId, bits 23-29 = msgNr, bits 30-31 = msgId (CC=1)
     const ref = makeCsvRef(15, 52)
-    expect(ref & 0xffff).toBe(15)
+    expect(ref & 0xfff).toBe(15)
+    expect((ref >>> 12) & 0xf).toBe(0)
     expect((ref >>> 23) & 0x7f).toBe(52)
-    expect((ref >>> 30) & 1).toBe(1)
+    expect((ref >>> 30) & 0x3).toBe(1)
+    // target device index lands in bits 12-15 (the old formula dropped it)
+    expect(makeCsvRef(57, 7, 2)).toBe(0x43802039)
+    expect((makeCsvRef(57, 7, 2) >>> 12) & 0xf).toBe(2)
+    // msgId follows the message type: CC14 -> 2, NRPN -> 3, others (e.g. CC14-LSB-first) -> 0
+    expect((makeCsvRef(15, 52, 0, 7) >>> 30) & 0x3).toBe(2)  // CC14
+    expect((makeCsvRef(15, 52, 0, 8) >>> 30) & 0x3).toBe(3)  // NRPN
+    expect((makeCsvRef(15, 52, 0, 12) >>> 30) & 0x3).toBe(0) // CC14-LSB-first: no ref
   })
 
   it('builds friendly labels', () => {
@@ -57,6 +65,8 @@ describe('presetDb', () => {
     // Deluge.csv has 128 distinct CCs (no duplicates), so CC-matching is unambiguous there.
     it('uses csvRef when it points at a row whose CC matches', () => {
       expect(slotParamRow(dev, 3, makeCsvRef(15, 52), 52)).toBe(15) // Delay/Amount: row 15, cc 52
+      // a non-zero device index in csvRef must not corrupt the extracted row (low 12 bits)
+      expect(slotParamRow(dev, 3, makeCsvRef(15, 52, 5), 52)).toBe(15)
     })
     it('falls back to a unique CC match when csvRef is 0/unset', () => {
       expect(slotParamRow(dev, 3, 0, 52)).toBe(15)   // csvRef 0 but cc 52 is unique -> Delay/Amount

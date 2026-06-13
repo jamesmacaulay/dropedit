@@ -113,24 +113,29 @@ Two cases reuse these fields:
 #### `csvRef`
 
 When a slot is mapped by choosing a parameter from a device's preset CSV, `csvRef` records which CSV
-row it came from. It is **`0` when the slot wasn't assigned from a CSV** (and stays `0` if the CC is set
-by hand).
+row it came from, so the Drop can re-find that row quickly even if the database file is later swapped.
+It is **empty when the slot wasn't assigned from a CSV** (and stays empty if the message number is set
+by hand) — "empty" meaning the two top bits (`msgId`) are `0`.
 
-When set, it packs the row index and the CC into a 32-bit integer:
+It packs five fields into a 32-bit integer:
 
 ```
-csvRef = 0x40000000 | (cc << 23) | rowIndex
+csvRef = (msgId << 30) | (msgNr << 23) | (msgNrLsb << 16) | (devId << 12) | lineNr
 ```
 
-| bits | meaning |
-|------|---------|
-| 0–15 | the **CSV row index** — 0-based, header excluded, blank lines counted |
-| 23–29 | the **CC number** (0–127) — the same value as `msgNr` |
-| 30 | a flag bit, set whenever a CSV reference is present |
+| bits | field | meaning |
+|------|-------|---------|
+| 30–31 | `msgId` | `0` = none/empty · `1` = CC · `2` = CC14 · `3` = NRPN |
+| 23–29 | `msgNr` | the (MSB) CC / message number (0–127), same as the slot's `msgNr` |
+| 16–22 | `msgNrLsb` | the LSB CC number for CC14 / NRPN (`0` for plain CC) |
+| 12–15 | `devId` | the target device index (0–7) — same as the slot's `target` |
+| 0–11 | `lineNr` | the **CSV row index** — 0-based, header excluded, blank lines counted (max 4095) |
 
-`csvRef` therefore depends only on the CC and the row; renaming or otherwise editing the control
-doesn't change it. Examples: Delay/Amount (CC 52, row 15) → `0x5A00000F`; Reverb amount (CC 91,
-row 75) → `0x6D80004B`; Master level (CC 7, row 57) → `0x43800039`.
+On load the Drop trusts `lineNr` only if `msgNr` and `devId` still match the slot, treating the
+reference as empty otherwise — so a changed database degrades gracefully. There's no checksum, and
+`csvRef` doesn't depend on the control's name. Examples (device 0, CC): Delay/Amount (CC 52, row 15)
+→ `0x5A00000F`; Reverb amount (CC 91, row 75) → `0x6D80004B`; Master level (CC 7, row 57) →
+`0x43800039`.
 
 ### Snapshots (`map.snp`)
 

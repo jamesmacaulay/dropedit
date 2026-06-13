@@ -153,10 +153,11 @@ export function assignParam(text: string, type: ControlType, id: string, param: 
   const obj = getPath(doc.root, ['map', type, id])
   const name = param.name.toUpperCase()
   const msgNr = param.cc ?? 0
-  const csvRef = makeCsvRef(param.rowIndex, msgNr)
   const slot0 = getPath(doc.root, ['map', type, id, '0'])
   if (obj && obj.kind === 'object' && slot0 && slot0.kind === 'object') {
-    // edit in place: name + slot0 msgType/msgNr/csvRef (+ optional ch)
+    // edit in place: name + slot0 msgType/msgNr/csvRef (+ optional ch). csvRef encodes slot0's target device.
+    const tnode = getMember(slot0, 'target')?.value
+    const devId = tnode?.kind === 'scalar' && typeof tnode.value === 'number' ? tnode.value : 0
     const edits: Edit[] = []
     const push = (path: (string | number)[], value: string | number) => {
       const s = scalarAt(doc, path); if (s) edits.push(editSetScalar(s, formatValue(value, s.raw)))
@@ -164,13 +165,13 @@ export function assignParam(text: string, type: ControlType, id: string, param: 
     push(['map', type, id, 'name'], name)
     push(['map', type, id, '0', 'msgType'], 3)
     push(['map', type, id, '0', 'msgNr'], msgNr)
-    push(['map', type, id, '0', 'csvRef'], csvRef)
+    push(['map', type, id, '0', 'csvRef'], makeCsvRef(param.rowIndex, msgNr, devId))
     if (ch != null) push(['map', type, id, '0', 'ch'], ch)
     return applyEdits(text, edits)
   }
-  // create fresh
+  // create fresh — a new control's slot targets device 0, so csvRef's devId is 0
   const colId = readLayerColId(doc, layerOfId(id))
-  return createControl(text, type, id, { name, colId, ch, msgNr, csvRef, msgType: 3 })
+  return createControl(text, type, id, { name, colId, ch, msgNr, csvRef: makeCsvRef(param.rowIndex, msgNr), msgType: 3 })
 }
 
 function readLayerColId(doc: JsonDoc, layer: number): number {
@@ -421,10 +422,12 @@ export function toggleSnapshotMembers(text: string, snpId: string, targets: Fiel
 
 // ---- assign a preset param to ONE slot -----------------------------------
 export function setSlotParam(text: string, type: ControlType, id: string, slot: string, param: PresetParam): string {
+  const tnode = scalarAt(parseJson(text), ['map', type, id, slot, 'target'])
+  const devId = typeof tnode?.value === 'number' ? tnode.value : 0 // csvRef encodes the target device
   let t = text
   t = setSlotField(t, type, id, slot, 'msgType', 3)
   t = setSlotField(t, type, id, slot, 'msgNr', param.cc ?? 0)
-  t = setSlotField(t, type, id, slot, 'csvRef', makeCsvRef(param.rowIndex, param.cc ?? 0))
+  t = setSlotField(t, type, id, slot, 'csvRef', makeCsvRef(param.rowIndex, param.cc ?? 0, devId))
   return t
 }
 

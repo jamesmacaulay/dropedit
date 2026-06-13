@@ -80,16 +80,15 @@ export function paramLabel(p: PresetParam): string {
 }
 
 // Which CSV row a CC-type slot maps to, for the Parameter dropdown / auto-naming.
-//   1. If csvRef's low 16 bits point at a row whose CC matches, trust it (this also disambiguates
-//      devices whose CSV repeats a CC).
-//   2. csvRef is just a lookup cache the Drop leaves at 0 when a mapping wasn't assigned via CSV
-//      (per the firmware docs), so fall back to matching on the CC itself — but only when exactly one
-//      row has that CC, to avoid guessing on a duplicate-CC device.
+//   1. If csvRef carries a reference (its msgId — the two top bits — is non-zero) and its lineNr
+//      points at a row whose CC matches, trust it (this also disambiguates devices that repeat a CC).
+//   2. Otherwise csvRef wasn't assigned via CSV (msgId 0 = "none"), so fall back to matching on the
+//      CC — but only when exactly one row has that CC, to avoid guessing on a duplicate-CC device.
 // Returns the rowIndex, or null if the slot can't be identified.
 export function slotParamRow(device: PresetDevice | null, msgType: number, csvRef: number, msgNr: number): number | null {
   if (!device || msgType !== 3) return null
-  const ri = csvRef & 0xffff
-  if (ri !== 0) { // csvRef 0 = "none" (per the firmware docs) — don't treat it as a reference to row 0
+  if ((csvRef >>> 30) !== 0) { // msgId != 0 -> csvRef holds a real reference (per firmware)
+    const ri = csvRef & 0xfff   // low 12 bits = CSV line number (bits 12-15 are the device index)
     const byRef = device.byRowIndex.get(ri)
     if (byRef && byRef.cc === msgNr) return ri
   }
@@ -132,17 +131,21 @@ export function deriveControlName(category: string, name: string): string {
   return joinName(extraShorten(cat), extraShorten(param))
 }
 
-// csvRef encoding — SOLVED from a 28-sample hardware capture (scripts/decode-csvref.mjs):
-//   csvRef = 0x40000000 | (cc << 23) | (rowIndex & 0xffff)
-//     bits 0..15  = CSV row index (0-based, blanks included)
-//     bits 23..30 = an 8-bit "(0x80 | cc)" byte: low 7 bits are the CC (0-127); the top bit (-> bit
-//                   30, the 0x40000000) is always set on CSV-preset mappings — a "valid reference"
-//                   marker, matching the docs' "0 = none, non-zero = entry". (All samples are CC
-//                   presets; a non-CC CSV preset could in theory use that bit differently.)
-//   So the high word just re-encodes the CC (redundant with msgNr) — there is NO checksum, and
-//   renaming a control does NOT change csvRef. Verified exact, e.g.:
-//     Delay/Amount  cc52 row15 -> 0x5A00000F   Reverb amount cc91 row75 -> 0x6D80004B
-//     HPF Freq      cc81 row46 -> 0x6880002E   Master level  cc7  row57 -> 0x43800039
-export function makeCsvRef(rowIndex: number, cc: number): number {
-  return (0x40000000 | ((cc & 0xff) << 23) | (rowIndex & 0xffff)) >>> 0
+// csvRef encoding — authoritative, from Neuzeit's firmware source (Slot::csvStamp_build):
+//   csvRef = (msgId << 30) | (msgNr << 23) | (msgNrLsb << 16) | (devId << 12) | lineNr
+//     bits 30-31  msgId   : 0 = none/empty, 1 = CC, 2 = CC14, 3 = NRPN
+//                           (msgId 0 — the two leftmost bits clear — means Drop ignores the ref)
+//     bits 23-29  msgNr   : the (MSB) CC / message number, 0-127
+//     bits 16-22  msgNrLsb: the LSB CC number for CC14 / NRPN (0 for plain CC)
+//     bits 12-15  devId   : target device index, 0-7
+//     bits 0-11   lineNr  : CSV row index (0-based, blank lines counted; 12-bit, max 4095)
+//   On load the Drop trusts lineNr only if msgNr (and devId) still match, so a swapped database
+//   degrades gracefully. No checksum; renaming a control doesn't change it. Our preset DB is
+//   CC-based so assignments use msgId = CC. Verified (device 0, CC), e.g.:
+//     Delay/Amount cc52 row15 -> 0x5A00000F   Reverb amount cc91 row75 -> 0x6D80004B
+//     HPF Freq     cc81 row46 -> 0x6880002E   Master level  cc7  row57 -> 0x43800039
+const CSV_MSG_ID: Record<number, number> = { 3: 1, 7: 2, 8: 3 } // CC -> 1, CC14 -> 2, NRPN -> 3 (per firmware)
+export function makeCsvRef(rowIndex: number, cc: number, devId = 0, msgType = 3, ccLsb = 0): number {
+  const msgId = CSV_MSG_ID[msgType] ?? 0
+  return (((msgId & 0x03) << 30) | ((cc & 0x7f) << 23) | ((ccLsb & 0x7f) << 16) | ((devId & 0x0f) << 12) | (rowIndex & 0xfff)) >>> 0
 }
