@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseJson } from '../model/jsonDoc'
 import { readLayers, readDevices, readControl, NUM_SEL_GROUPS } from '../model/dropProject'
-import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setDeviceCsv, saveSnapshot, loadSnapshot, setGroupMember, toggleGroupMember, setSnapshotMembers, toggleSnapshotMembers, type CopiedControl } from '../model/edits'
+import { copyControlText, pasteControl, copyControls, pasteControls, copySnapshots, pasteSnapshots, removeControl, createControl, setStateValue, setDeviceCsv, saveSnapshot, loadSnapshot, setGroupMember, toggleGroupMember, setSnapshotMembers, toggleSnapshotMembers, type CopiedControl } from '../model/edits'
 import { loadBundledByPathFile } from '../data/devices'
 import { parsePresetCsv, type PresetDevice } from '../model/presetDb'
 import { isPositional, withLayer, withBank, controlIdsForLayer, type ControlType } from '../model/controlId'
@@ -14,6 +14,7 @@ import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
 import { DeviceEditor } from './DeviceEditor'
 import { CLEAN_INIT, DAW_INIT } from '../data/inits'
+import { IS_MAC } from './platform'
 
 const LAYERS = 8
 const STORAGE_KEY = 'dropedit:project'
@@ -22,7 +23,6 @@ const HISTORY_CAP = 100          // max undo depth (each entry is a full project
 const COALESCE_MS = 450          // typing-burst window: text-input edits within this collapse to one step
 
 // keyboard-shortcut hints shown in button labels (⌘ on mac, ^ elsewhere)
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
 const MOD = IS_MAC ? '⌘' : '^'
 const SHIFT_MOD = IS_MAC ? '⇧⌘' : '^⇧'
 const DEL_KEY = IS_MAC ? '⌫' : 'Del'
@@ -567,7 +567,8 @@ export function App() {
                   ))}
                 </div>
                 <Surface doc={doc} layer={layer} selected={new Set(selection)} onSelect={onSelect}
-                  saveGroup={snapMode === 'save' ? snapDraft.group : null} editSnap={snapMode === 'edit' ? editSnap : null} selectAllHint={`${MOD}A`} />
+                  saveGroup={snapMode === 'save' ? snapDraft.group : null} editSnap={snapMode === 'edit' ? editSnap : null} selectAllHint={`${MOD}A`}
+                  onSetValue={(type, id, value, coalesce) => { if (!text) return; (coalesce ? applyLive : apply)(setStateValue(text, type, id, value, true)) }} />
                 {snapMode === 'save' ? (
                   <div className="ops">
                     <span className="muted">Group {snapDraft.group + 1}: green = saved · red = skipped</span>

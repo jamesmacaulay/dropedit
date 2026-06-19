@@ -16,6 +16,7 @@ import {
 import { EnumField } from './EnumField'
 import { ValidatedInput, validateName, validateInt, validateNum } from './ValidatedInput'
 import { COLOR_NAMES } from './palette'
+import { MOD_KEY } from './platform'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
   addSlot, createControl, setSlotParam, setGroupMember, setSnapshotValue, setSnapshotMembers,
@@ -47,7 +48,7 @@ function shared<T>(items: Target[], fn: (t: Target) => T): T | typeof MULTI | un
 export function Sidebar(props: SidebarProps) {
   const { selection } = props
   if (selection.length === 0) {
-    return <aside className="sidebar"><p className="hint">Select a control. <strong>⌘/Ctrl-click</strong> adds or removes controls; <strong>Shift-click</strong> selects a range. Click a row/column label to grab a whole row or column.</p></aside>
+    return <aside className="sidebar"><p className="hint">Click to select a control or snapshot. <strong>{MOD_KEY}-click</strong> adds or removes controls from the selection; <strong>Shift-click</strong> selects a range. Click a row/column label to grab a whole row or column.</p><p className="hint"><strong>{MOD_KEY}-C/X/V</strong> to copy/cut/paste controls and snapshots. <strong>{MOD_KEY}-Z</strong> to undo, <strong>{MOD_KEY}-Shift-Z</strong> to redo.</p><p className="hint">Adjust the values of rotaries and faders by dragging them up and down. Double-click rotary buttons and mute buttons to toggle them on and off.</p></aside>
   }
   if (selection.length === 1 && selection[0].startsWith('snp:')) {
     return <SnapshotEditor {...props} id={selection[0].slice(4)} />
@@ -127,12 +128,12 @@ function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
       {!someMember
         ? <p className="hint">Not stored. Check the box (or press <strong>S</strong>) to add — it captures the control’s current live value.</p>
         : (<>
-            {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
-            <label>Stored value (0–1)<ValidatedInput inputMode="decimal"
-              value={valueShared === MULTI || valueShared === undefined ? '' : String(valueShared)}
-              placeholder={valueShared === MULTI ? '[multiple]' : ''}
-              validate={validateNum('Stored value', 0, 1)} onCommit={(raw) => onValue(Number(raw))} /></label>
-          </>)}
+          {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
+          <label>Stored value (0–1)<ValidatedInput inputMode="decimal"
+            value={valueShared === MULTI || valueShared === undefined ? '' : String(valueShared)}
+            placeholder={valueShared === MULTI ? '[multiple]' : ''}
+            validate={validateNum('Stored value', 0, 1)} onCommit={(raw) => onValue(Number(raw))} /></label>
+        </>)}
     </aside>
   )
 }
@@ -176,7 +177,7 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v), true)
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))
   const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v), true)
-  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t, true) }
+  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v, true); onChange(t, true) }
 
   // "Generate" link: selected controls whose preset param implies a name different from the current
   // one. Clicking re-derives the name for exactly those controls (then the link self-hides).
@@ -423,10 +424,10 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
         onSet={(v) => set('curveId', v, true)} />
       {valueUniform
         ? (isProgram
-            ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
-            : isFlex
-              ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
-              : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
+          ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
+          : isFlex
+            ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
+            : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
         : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Message Type and Curve to edit it.</p>}
     </div>
   )

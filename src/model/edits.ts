@@ -495,13 +495,17 @@ export function setDeviceCsv(text: string, index: number, path: string, file: st
 
 // ---- live state value ----------------------------------------------------
 /** Set a control's current value in the `state` section (creating the entry if missing). */
-export function setStateValue(text: string, type: ControlType, id: string, value: number): string {
+// `exact` writes the value verbatim (used by the value field, so a typed value isn't rounded); when
+// false we match the original token's decimal style for byte-faithful carries (copy/paste, snapshots)
+// that already hold a precise captured value.
+export function setStateValue(text: string, type: ControlType, id: string, value: number, exact = false): string {
   const doc = parseJson(text)
+  const fmt = (raw?: string) => (exact ? String(value) : formatValue(value, raw))
   const s = scalarAt(doc, ['state', type, id])
-  if (s) return applyEdits(text, [editSetScalar(s, formatValue(value, s.raw))])
+  if (s) return applyEdits(text, [editSetScalar(s, fmt(s.raw))])
   const obj = getObject(doc.root, ['state', type])
   if (!obj) return text
-  return applyEdits(text, [editInsertMember(text, obj, id, formatValue(value))])
+  return applyEdits(text, [editInsertMember(text, obj, id, fmt())])
 }
 
 // ---- copy / paste a single control ---------------------------------------
