@@ -13,6 +13,7 @@ import { loadBundled } from '../src/data/devices'
 const here = dirname(fileURLToPath(import.meta.url))
 const EXP = readFileSync(join(here, 'fixtures', 'deluge-exp.json'), 'utf8')
 const OLD = readFileSync(join(here, 'fixtures', 'old-daw-init.json'), 'utf8')
+const NRPN = readFileSync(join(here, 'fixtures', 'nrpn-14bit.json'), 'utf8')
 
 describe('UI smoke (renderToString, no DOM)', () => {
   it('App boots into the clean-init blank slate without throwing', () => {
@@ -56,6 +57,18 @@ describe('UI smoke (renderToString, no DOM)', () => {
     // Behavior is now a decoded dropdown (behavId 1 = Dynamic Pot) with a Custom fallback
     expect(html).toContain('Dynamic Pot')
     expect(html).toContain('Custom…')
+  })
+
+  it('Sidebar shows an MSB·LSB pair for a 14-bit (NRPN) slot, not a single CC field', () => {
+    const doc = parseJson(NRPN)
+    // rotary 000 is NRPN MSB 3 / LSB 14 (msgNr 3.014)
+    const html = renderToString(<Sidebar text={NRPN} doc={doc} deviceFor={() => null} selection={['rotary:000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
+    expect(html).toContain('CC / number (MSB · LSB)') // the pair label
+    expect(html).toContain('placeholder="MSB"')
+    expect(html).toContain('placeholder="LSB"')
+    expect(html).toContain('value="3"')  // MSB field
+    expect(html).toContain('value="14"') // LSB field
+    expect(html).not.toContain('>CC / number<') // the plain single-field label is gone for NRPN
   })
 
   it('Sidebar shows [multiple values] across a heterogeneous selection', () => {

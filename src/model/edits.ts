@@ -60,6 +60,16 @@ export function setSlotField(text: string, type: ControlType, id: string, slot: 
   return applyEdits(text, [editSetScalar(s, formatValue(value, s.raw))])
 }
 
+/** Set a slot field to an already-formatted numeric literal verbatim (no formatValue / decimal
+ *  mirroring). Used for MSB.LSB floats (14-bit message numbers / Program+Bank), whose decimal count
+ *  varies with the LSB and so must be written exactly as computed (see enums.formatBankFloat). */
+export function setSlotFieldRaw(text: string, type: ControlType, id: string, slot: string, field: string, rawValue: string): string {
+  const doc = parseJson(text)
+  const s = scalarAt(doc, ['map', type, id, slot, field])
+  if (!s) return text
+  return applyEdits(text, [editSetScalar(s, rawValue)])
+}
+
 export interface FieldTarget { type: ControlType; id: string }
 
 /** Set the same control-level field across many controls in one batch (multi-select edit). */
