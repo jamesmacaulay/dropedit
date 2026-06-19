@@ -127,12 +127,12 @@ function SnapshotControlEditor({ text, doc, snpId, selection, onChange }: {
       {!someMember
         ? <p className="hint">Not stored. Check the box (or press <strong>S</strong>) to add — it captures the control’s current live value.</p>
         : (<>
-            {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
-            <label>Stored value (0–1)<ValidatedInput inputMode="decimal"
-              value={valueShared === MULTI || valueShared === undefined ? '' : String(valueShared)}
-              placeholder={valueShared === MULTI ? '[multiple]' : ''}
-              validate={validateNum('Stored value', 0, 1)} onCommit={(raw) => onValue(Number(raw))} /></label>
-          </>)}
+          {!allMember && <p className="meta">Editing the {members.length} stored of {targets.length} selected.</p>}
+          <label>Stored value (0–1)<ValidatedInput inputMode="decimal"
+            value={valueShared === MULTI || valueShared === undefined ? '' : String(valueShared)}
+            placeholder={valueShared === MULTI ? '[multiple]' : ''}
+            validate={validateNum('Stored value', 0, 1)} onCommit={(raw) => onValue(Number(raw))} /></label>
+        </>)}
     </aside>
   )
 }
@@ -176,7 +176,7 @@ function ControlEditor({ text, doc, deviceFor, selection, defaultColId, onChange
   const onName = (v: string) => onChange(single ? setControlField(text, single.type, single.id, 'name', v) : bulkSetControlField(text, fieldTargets, 'name', v), true)
   const onColor = (v: number) => onChange(bulkSetControlField(text, fieldTargets, 'colId', v))
   const onField = (f: string, v: number) => onChange(bulkSetControlField(text, fieldTargets, f, v), true)
-  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v); onChange(t, true) }
+  const onStateVal = (v: number) => { let t = text; for (const tg of targets) t = setStateValue(t, tg.type, tg.id, v, true); onChange(t, true) }
 
   // "Generate" link: selected controls whose preset param implies a name different from the current
   // one. Clicking re-derives the name for exactly those controls (then the link self-hides).
@@ -423,10 +423,10 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
         onSet={(v) => set('curveId', v, true)} />
       {valueUniform
         ? (isProgram
-            ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
-            : isFlex
-              ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
-              : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
+          ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
+          : isFlex
+            ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
+            : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))
         : <p className="meta">Output range hidden — the selected slots have different message types or curves (the value is scaled per type). Set a single Message Type and Curve to edit it.</p>}
     </div>
   )

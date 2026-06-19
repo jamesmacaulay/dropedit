@@ -71,6 +71,16 @@ code { background: #0c0c10; padding: 1px 5px; border-radius: 4px; color: var(--a
 /* the SVG viewBox scales proportionally: fill the available width between the columns */
 .surface { height: auto; width: 100%; }
 .surface text.lbl:hover { fill: #e7e9ee; }
+/* control hit targets (rotary horseshoe / rotbut centre): invisible until hover (dim grey) or
+   selected (bright white). The .sel rule wins over :hover so a selected, hovered target stays white. */
+.surface .hit { fill: transparent; stroke: transparent; stroke-width: 2; stroke-linejoin: round; cursor: pointer; }
+.surface .hit:hover { stroke: #9aa0ad; }
+.surface .hit.sel, .surface .hit.sel:hover { stroke: #fff; stroke-width: 2.5; }
+/* mute / fader boxes are their own visible control + hit target, so they keep their colour fill
+   and only swap the outline: dim grey on hover, bright white when selected. */
+.surface .ctlbox { cursor: pointer; }
+.surface .ctlbox:hover { stroke: #9aa0ad; stroke-width: 2; }
+.surface .ctlbox.sel, .surface .ctlbox.sel:hover { stroke: #fff; stroke-width: 2.5; }
 /* no-wrap on desktop: the left column is fixed, the surface flexes to fill (mobile query stacks) */
 .board { display: flex; gap: 18px; align-items: flex-start; flex-wrap: nowrap; }
 .left-col { display: flex; flex-direction: column; gap: 10px; width: var(--col-w); flex: 0 0 var(--col-w); }
