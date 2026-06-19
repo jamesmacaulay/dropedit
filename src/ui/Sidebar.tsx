@@ -350,6 +350,9 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   // 14-bit message types (CC14 / NRPN / CC14 LSB first) store their message number as an MSB.LSB
   // float in msgNr (same packing as Program+Bank), so they get the MSB·LSB pair instead of one field.
   const is14bit = msgType !== MULTI && FOURTEEN_BIT_TYPES.has(msgType as number)
+  // Pitch bend (5) and (channel) Aftertouch (6) are channel-wide messages with no CC/note number, so
+  // they have no message # field at all. (Poly Aftertouch keeps it — its value IS keyed by note.)
+  const noMsgNr = msgType === 5 || msgType === 6
   // The output value editor (range / Flex XY / program #) is laid out and scaled per the message
   // type AND curve; with those mixed across the selection it would be meaningless, so hide it.
   const valueUniform = msgType !== MULTI && curveId !== MULTI
@@ -433,9 +436,10 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       {paramPicker}
       {csvRefLine}
       {/* msgNr is the note/CC number for normal types; the 14-bit types (CC14/NRPN/CC14 LSB first)
-          pack an MSB.LSB message number there, so they get the MSB·LSB pair. For program types it's
-          hidden (Program+Bank's two bank values live there, edited via the Bank fields below). */}
-      {!isProgram && (is14bit
+          pack an MSB.LSB message number there, so they get the MSB·LSB pair. It's hidden for program
+          types (Program+Bank's two bank values live there, edited via the Bank fields below) and for
+          pitch bend / aftertouch (channel messages with no number at all). */}
+      {!isProgram && !noMsgNr && (is14bit
         ? msbLsbPair('CC / number (MSB · LSB)')
         : num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 }))}
       <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE} allow={allowedFor(CURVE_BY_KIND, slotKinds)}

@@ -8,6 +8,7 @@ import { Surface } from '../src/ui/Surface'
 import { Sidebar, SnapshotEditPanel } from '../src/ui/Sidebar'
 import { SnapshotGrid, SnapshotMeta } from '../src/ui/SnapshotGrid'
 import { parseJson } from '../src/model/jsonDoc'
+import { setSlotField } from '../src/model/edits'
 import { loadBundled } from '../src/data/devices'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -69,6 +70,19 @@ describe('UI smoke (renderToString, no DOM)', () => {
     expect(html).toContain('value="3"')  // MSB field
     expect(html).toContain('value="14"') // LSB field
     expect(html).not.toContain('>CC / number<') // the plain single-field label is gone for NRPN
+  })
+
+  it('Sidebar hides the message # field for pitch bend and aftertouch slots', () => {
+    // rotary 000 is a CC slot (shows "CC / number"); switching to pitch bend (5) / aftertouch (6)
+    // should drop the field entirely — those are channel messages with no CC/note number.
+    const cc = renderToString(<Sidebar text={EXP} doc={parseJson(EXP)} deviceFor={() => null} selection={['rotary:000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
+    expect(cc).toContain('CC / number') // baseline: the field is there for CC
+    for (const mt of [5, 6]) {
+      const t = setSlotField(EXP, 'rotary', '000', '0', 'msgType', mt)
+      const html = renderToString(<Sidebar text={t} doc={parseJson(t)} deviceFor={() => null} selection={['rotary:000']} defaultColId={0} onChange={() => {}} onSetActive={() => {}} />)
+      expect(html).not.toContain('CC / number')
+      expect(html).not.toContain('>Note #<')
+    }
   })
 
   it('Sidebar shows [multiple values] across a heterogeneous selection', () => {
