@@ -16,6 +16,7 @@ import {
 import { EnumField } from './EnumField'
 import { ValidatedInput, validateName, validateInt, validateNum } from './ValidatedInput'
 import { COLOR_NAMES } from './palette'
+import { MOD_KEY } from './platform'
 import {
   setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
   addSlot, createControl, setSlotParam, setGroupMember, setSnapshotValue, setSnapshotMembers,
@@ -47,7 +48,7 @@ function shared<T>(items: Target[], fn: (t: Target) => T): T | typeof MULTI | un
 export function Sidebar(props: SidebarProps) {
   const { selection } = props
   if (selection.length === 0) {
-    return <aside className="sidebar"><p className="hint">Select a control. <strong>⌘/Ctrl-click</strong> adds or removes controls; <strong>Shift-click</strong> selects a range. Click a row/column label to grab a whole row or column.</p></aside>
+    return <aside className="sidebar"><p className="hint">Click to select a control or snapshot. <strong>{MOD_KEY}-click</strong> adds or removes controls from the selection; <strong>Shift-click</strong> selects a range. Click a row/column label to grab a whole row or column.</p><p className="hint"><strong>{MOD_KEY}-C/X/V</strong> to copy/cut/paste controls and snapshots. <strong>{MOD_KEY}-Z</strong> to undo, <strong>{MOD_KEY}-Shift-Z</strong> to redo.</p><p className="hint">Adjust the values of rotaries and faders by dragging them up and down. Double-click rotary buttons and mute buttons to toggle them on and off.</p></aside>
   }
   if (selection.length === 1 && selection[0].startsWith('snp:')) {
     return <SnapshotEditor {...props} id={selection[0].slice(4)} />

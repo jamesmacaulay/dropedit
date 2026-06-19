@@ -14,6 +14,7 @@ import { SnapshotGrid, SnapshotMeta } from './SnapshotGrid'
 import { Sidebar, SnapshotEditPanel } from './Sidebar'
 import { DeviceEditor } from './DeviceEditor'
 import { CLEAN_INIT, DAW_INIT } from '../data/inits'
+import { IS_MAC } from './platform'
 
 const LAYERS = 8
 const STORAGE_KEY = 'dropedit:project'
@@ -22,7 +23,6 @@ const HISTORY_CAP = 100          // max undo depth (each entry is a full project
 const COALESCE_MS = 450          // typing-burst window: text-input edits within this collapse to one step
 
 // keyboard-shortcut hints shown in button labels (⌘ on mac, ^ elsewhere)
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
 const MOD = IS_MAC ? '⌘' : '^'
 const SHIFT_MOD = IS_MAC ? '⇧⌘' : '^⇧'
 const DEL_KEY = IS_MAC ? '⌫' : 'Del'
