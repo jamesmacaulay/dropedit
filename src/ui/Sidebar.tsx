@@ -11,14 +11,14 @@ import {
   MSG_TYPE, BEHAV, FEEDB, CURVE,
   MSG_TYPE_BY_KIND, BEHAV_BY_KIND, FEEDB_BY_KIND, CURVE_BY_KIND, allowedFor,
   slotRange, storedToDisplay, displayToStored, FLEX_CURVE_ID, unpackXY, packXY,
-  PROGRAM_TYPES, unpackBank, packBank,
+  PROGRAM_TYPES, unpackBank, packBank, FOURTEEN_BIT_TYPES, formatBankFloat,
 } from '../model/enums'
 import { EnumField } from './EnumField'
 import { ValidatedInput, validateName, validateInt, validateNum } from './ValidatedInput'
 import { COLOR_NAMES } from './palette'
 import { MOD_KEY } from './platform'
 import {
-  setControlField, setSlotField, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
+  setControlField, setSlotField, setSlotFieldRaw, bulkSetControlField, bulkSetSlotField, assignParam, setStateValue,
   addSlot, createControl, setSlotParam, setGroupMember, setSnapshotValue, setSnapshotMembers,
 } from '../model/edits'
 
@@ -289,6 +289,18 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
     }
     onChange(t, coalesce)
   }
+  // Write msgNr as an exact MSB.LSB float literal (Program+Bank / 14-bit address). Goes through
+  // setSlotFieldRaw rather than `set` because the decimal count varies with the LSB (5.0 vs 0.064)
+  // and formatValue's mirror-the-original rule would clip it. Clears csvRef like `set` does for msgNr.
+  const setMsgNrPacked = (packed: number) => {
+    let t = text
+    const raw = formatBankFloat(packed)
+    for (const e of entries) {
+      t = setSlotFieldRaw(t, e.type, e.id, e.slot.key, 'msgNr', raw)
+      t = setSlotField(t, e.type, e.id, e.slot.key, 'csvRef', 0)
+    }
+    onChange(t, true)
+  }
   const setParam = (rowIndex: number) => {
     const p = device?.byRowIndex.get(rowIndex); if (!p) return
     const derived = deriveControlName(p.section, p.name)
@@ -335,6 +347,12 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
   // packs its two bank values into msgNr as a float. So those types get a bespoke layout.
   const isProgram = msgType !== MULTI && PROGRAM_TYPES.has(msgType as number)
   const isProgBank = msgType === 10
+  // 14-bit message types (CC14 / NRPN / CC14 LSB first) store their message number as an MSB.LSB
+  // float in msgNr (same packing as Program+Bank), so they get the MSB·LSB pair instead of one field.
+  const is14bit = msgType !== MULTI && FOURTEEN_BIT_TYPES.has(msgType as number)
+  // Pitch bend (5) and (channel) Aftertouch (6) are channel-wide messages with no CC/note number, so
+  // they have no message # field at all. (Poly Aftertouch keeps it — its value IS keyed by note.)
+  const noMsgNr = msgType === 5 || msgType === 6
   // The output value editor (range / Flex XY / program #) is laid out and scaled per the message
   // type AND curve; with those mixed across the selection it would be meaningless, so hide it.
   const valueUniform = msgType !== MULTI && curveId !== MULTI
@@ -359,15 +377,16 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
       </span>
     </label>
   }
-  // Program+Bank stores its two bank values packed into msgNr as MSB.LSB float.
-  const bankFields = () => {
+  // Program+Bank's two bank bytes and the 14-bit types' MSB/LSB message number are both stored as an
+  // MSB.LSB float in msgNr, so they share one pair of 0-127 fields (only the label differs).
+  const msbLsbPair = (labelTxt: string) => {
     const v = sh('msgNr')
     const multi = v === MULTI
     const { msb, lsb } = multi ? { msb: 0, lsb: 0 } : unpackBank(v as number)
-    return <label>Bank (MSB · LSB)
+    return <label>{labelTxt}
       <span className="xy-pair">
-        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="MSB" value={multi ? '' : String(msb)} validate={validateInt('MSB', 0, 127)} onCommit={(raw) => set('msgNr', packBank(Number(raw), lsb), true)} /></span>
-        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="LSB" value={multi ? '' : String(lsb)} validate={validateInt('LSB', 0, 127)} onCommit={(raw) => set('msgNr', packBank(msb, Number(raw)), true)} /></span>
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="MSB" value={multi ? '' : String(msb)} validate={validateInt('MSB', 0, 127)} onCommit={(raw) => setMsgNrPacked(packBank(Number(raw), lsb))} /></span>
+        <span className="xy-cell"><ValidatedInput inputMode="numeric" placeholder="LSB" value={multi ? '' : String(lsb)} validate={validateInt('LSB', 0, 127)} onCommit={(raw) => setMsgNrPacked(packBank(msb, Number(raw)))} /></span>
       </span>
     </label>
   }
@@ -416,15 +435,19 @@ function SlotFields({ text, entries, deviceFor, devices, onChange }: { text: str
         onSet={(v) => set('msgType', v)} />
       {paramPicker}
       {csvRefLine}
-      {/* msgNr is the note/CC number for normal types; for program types it's hidden (Program+Bank's
-          two bank values live there, edited via the Bank fields below). */}
-      {!isProgram && num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 })}
+      {/* msgNr is the note/CC number for normal types; the 14-bit types (CC14/NRPN/CC14 LSB first)
+          pack an MSB.LSB message number there, so they get the MSB·LSB pair. It's hidden for program
+          types (Program+Bank's two bank values live there, edited via the Bank fields below) and for
+          pitch bend / aftertouch (channel messages with no number at all). */}
+      {!isProgram && !noMsgNr && (is14bit
+        ? msbLsbPair('CC / number (MSB · LSB)')
+        : num(msgType === 2 ? 'Note #' : msgType === MULTI ? 'CC / Note #' : 'CC / number', 'msgNr', { min: 0, max: 127 }))}
       <EnumField key={`curve-${idKey}`} label="Curve" map={CURVE} allow={allowedFor(CURVE_BY_KIND, slotKinds)}
         value={curveId === MULTI ? undefined : (curveId as number)} multi={curveId === MULTI}
         onSet={(v) => set('curveId', v, true)} />
       {valueUniform
         ? (isProgram
-          ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && bankFields()}</>)
+          ? (<>{rangeNum('Program #', 'maxOut')}{isProgBank && msbLsbPair('Bank (MSB · LSB)')}</>)
           : isFlex
             ? (<>{xyPoint('XY 1 (x · y)', 'maxOut')}{xyPoint('XY 2 (x · y)', 'minOut')}</>)
             : (<>{rangeNum('Max out', 'maxOut')}{rangeNum('Min out', 'minOut')}</>))

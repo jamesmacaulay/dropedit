@@ -10,7 +10,7 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url))
 const fx = (n: string) => readFileSync(join(here, 'fixtures', n), 'utf8')
-const FIXTURES = ['deluge-exp.json', 'old-daw-init.json', 'empty-template.json']
+const FIXTURES = ['deluge-exp.json', 'old-daw-init.json', 'empty-template.json', 'nrpn-14bit.json']
 
 function scalarAt(doc: ReturnType<typeof parseJson>, path: (string | number)[]): ScalarNode {
   const n = getPath(doc.root, path)

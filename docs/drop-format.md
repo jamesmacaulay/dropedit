@@ -110,6 +110,13 @@ Two cases reuse these fields:
   **Program+Bank** also packs its two bank-select bytes into `msgNr` as a float `MSB.LSB` — e.g.
   `5.009` means MSB 5, LSB 9.
 
+The **14-bit message types** — `CC14` (7), `NRPN` (8), and `CC14 LSB first` (12) — store their
+**message number** the same way: `msgNr` is the float `MSB + LSB/1000` (MSB and LSB each 0–127), and
+`csvRef` stays `0` when the address is set by hand. The Drop always writes three decimals, so a bare
+LSB is `5.000`, not `5`. Hardware-confirmed by setting these by hand on a Drop and reading the export:
+`3/14 → 3.014`, `1/100 → 1.100`, `5/0 → 5.000`, `0/64 → 0.064` (identical for all three types). This
+is what the editor's MSB·LSB pair edits; an unmapped CC/Note slot keeps the plain integer `msgNr`.
+
 #### `csvRef`
 
 When a slot is mapped by choosing a parameter from a device's preset CSV, `csvRef` records which CSV

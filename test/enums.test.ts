@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { storedToDisplay, displayToStored, unpackXY, packXY, unpackBank, packBank, STORE_MAX,
-  allowedFor, MSG_TYPE_BY_KIND, BEHAV_BY_KIND, CURVE_BY_KIND } from '../src/model/enums'
+  allowedFor, MSG_TYPE_BY_KIND, BEHAV_BY_KIND, CURVE_BY_KIND,
+  FOURTEEN_BIT_TYPES, formatBankFloat } from '../src/model/enums'
 
 // Slot Min/Max are stored as a 14-bit value over the message type's display range
 // (verified by hardware capture). msgType codes: 3=CC (0-127), 7=CC14 (0-16383), 5=Pitch bend (±8192).
@@ -63,5 +64,28 @@ describe('Program+Bank msgNr float packing', () => {
     expect(unpackBank(5.009)).toEqual({ msb: 5, lsb: 9 }) // captured bank fields 5 then 9
     expect(packBank(5, 9)).toBe(5.009)
     expect(unpackBank(packBank(12, 90))).toEqual({ msb: 12, lsb: 90 }) // round-trips, incl. trailing zero
+  })
+})
+
+// The 14-bit message types reuse the same MSB.LSB float packing for their message NUMBER (msgNr).
+// Values below are from a real Drop export (test/fixtures/nrpn-14bit.json): NRPN/CC14/CC14-LSB-first
+// set by hand to MSB/LSB pairs, with csvRef left at 0.
+describe('14-bit (CC14 / NRPN / CC14 LSB first) msgNr float packing', () => {
+  it('covers the three 14-bit message types', () => {
+    expect([...FOURTEEN_BIT_TYPES].sort((a, b) => a - b)).toEqual([7, 8, 12])
+  })
+  it('packs/unpacks the captured MSB/LSB addresses', () => {
+    expect(packBank(3, 14)).toBe(3.014)   // NRPN 3/14 -> 3.014
+    expect(packBank(1, 100)).toBe(1.1)    // NRPN 1/100 -> 1.100
+    expect(packBank(5, 0)).toBe(5)        // NRPN 5/0  -> 5.000
+    expect(packBank(0, 64)).toBe(0.064)   // NRPN 0/64 -> 0.064
+    expect(unpackBank(1.1)).toEqual({ msb: 1, lsb: 100 }) // .1 is LSB 100, not 1
+    expect(unpackBank(0.064)).toEqual({ msb: 0, lsb: 64 })
+  })
+  it('formats the float exactly as the Drop writes it (always 3 decimals)', () => {
+    expect(formatBankFloat(3.014)).toBe('3.014')
+    expect(formatBankFloat(1.1)).toBe('1.100')
+    expect(formatBankFloat(5)).toBe('5.000')
+    expect(formatBankFloat(0.064)).toBe('0.064')
   })
 })

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { load, readControl, readLayers, readDevices, mappedIds, readStateValue, readGroupMember, selGroupLocation, readSnapshotValue, readSnapshotMember } from '../src/model/dropProject'
 import {
-  setControlField, setSlotField, bulkSetSlotField, assignParam, createControl, removeControl,
+  setControlField, setSlotField, setSlotFieldRaw, bulkSetSlotField, assignParam, createControl, removeControl,
   setChannelForLayer, copyLayer, copyControlText, pasteControl, copyControls, pasteControls,
   copySnapshots, pasteSnapshots, formatValue, setStateValue,
   addSlot, removeSlot, saveSnapshot, loadSnapshot, setSlotParam, setGroupMember, toggleGroupMember,
@@ -12,11 +12,13 @@ import {
   setDeviceField, setDeviceCsv,
 } from '../src/model/edits'
 import type { PresetParam } from '../src/model/presetDb'
+import { packBank, formatBankFloat } from '../src/model/enums'
 import { loadBundledByPathFile } from '../src/data/devices'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const EXP = readFileSync(join(here, 'fixtures', 'deluge-exp.json'), 'utf8')
 const OLD = readFileSync(join(here, 'fixtures', 'old-daw-init.json'), 'utf8')
+const NRPN = readFileSync(join(here, 'fixtures', 'nrpn-14bit.json'), 'utf8')
 const obj = (t: string) => JSON.parse(t)
 
 const MASTER_LEVEL: PresetParam = { rowIndex: 57, section: 'Master', name: 'Master level', cc: 7 }
@@ -459,5 +461,46 @@ describe('snapshot copy / paste / delete (positional within a bank)', () => {
     const out = obj(removeControl(OLD, 'snp', '0000'))
     expect(out.map.snp['0000']).toBeUndefined()
     expect(out.map.snp['0001'].name).toBe('SNP 01-1-2') // siblings intact
+  })
+})
+
+// Issue #1: 14-bit message numbers (CC14 / NRPN / CC14 LSB first) live in msgNr as an MSB.LSB float.
+// The Sidebar edits them through setSlotFieldRaw(formatBankFloat(packBank(msb, lsb))); these cover the
+// model building blocks. Fixture nrpn-14bit.json is a real Drop export (see decode in CLAUDE/docs).
+describe('14-bit msgNr (MSB.LSB) edits — issue #1', () => {
+  const writeAddr = (t: string, id: string, msb: number, lsb: number) =>
+    setSlotFieldRaw(t, 'rotary', id, '0', 'msgNr', formatBankFloat(packBank(msb, lsb)))
+
+  it('reads the captured addresses as MSB.LSB floats', () => {
+    const o = obj(NRPN)
+    expect(o.map.rotary['000']['0']).toMatchObject({ msgType: 8, msgNr: 3.014 })  // NRPN 3/14
+    expect(o.map.rotary['010']['0']).toMatchObject({ msgType: 8, msgNr: 1.1 })    // NRPN 1/100
+    expect(o.map.rotary['020']['0']).toMatchObject({ msgType: 8, msgNr: 5 })      // NRPN 5/0
+    expect(o.map.rotary['030']['0']).toMatchObject({ msgType: 8, msgNr: 0.064 })  // NRPN 0/64
+    expect(o.map.rotary['001']['0']).toMatchObject({ msgType: 7, msgNr: 3.014 })  // CC14 3/14
+    expect(o.map.rotary['002']['0']).toMatchObject({ msgType: 12, msgNr: 3.014 }) // CC14 LSB-first 3/14
+  })
+
+  it('writes the exact 3-decimal bytes the Drop uses', () => {
+    // changing only the LSB of the 5/0 slot must not lose it — the bug formatValue would cause
+    // (mirroring "5.000"'s decimals happens to work, but a verbatim toFixed(3) is what guarantees it).
+    const out = writeAddr(NRPN, '020', 5, 14)
+    expect(out).toContain('"msgNr": 5.014,')
+    expect(obj(out).map.rotary['020']['0'].msgNr).toBe(5.014)
+    // a fresh address with a trailing-zero LSB keeps three decimals
+    expect(writeAddr(NRPN, '030', 7, 0)).toContain('"msgNr": 7.000,')
+  })
+
+  it('keeps the edit localized — neighbours and csvRef untouched', () => {
+    const out = obj(writeAddr(NRPN, '020', 5, 14))
+    expect(out.map.rotary['020']['0'].csvRef).toBe(0)         // was hand-set, stays 0
+    expect(out.map.rotary['010']['0'].msgNr).toBe(1.1)        // neighbour intact
+    expect(out.map.rotary['000']['0'].msgNr).toBe(3.014)      // neighbour intact
+  })
+
+  it('setSlotFieldRaw writes a numeric literal verbatim (no quoting / re-formatting)', () => {
+    const out = setSlotFieldRaw(NRPN, 'rotary', '000', '0', 'msgNr', '0.064')
+    expect(out).toContain('"msgNr": 0.064,')
+    expect(out).not.toContain('"msgNr": "0.064"')
   })
 })

@@ -53,6 +53,18 @@ export function packBank(msb: number, lsb: number): number {
   return Number((msb + lsb / 1000).toFixed(3))
 }
 
+// The 14-bit message types (CC14, NRPN, CC14 LSB first) store their message *number* as the SAME
+// MSB.LSB float as Program+Bank: msgNr = MSB + LSB/1000 (hardware-confirmed — set by hand on a Drop,
+// raw bytes: NRPN 3/14 -> 3.014, 1/100 -> 1.100, 5/0 -> 5.000, 0/64 -> 0.064; CC14 and CC14-LSB-first
+// match). So packBank/unpackBank serve both. (MSB,LSB span 0-127 each; csvRef stays 0 when hand-set.)
+export const FOURTEEN_BIT_TYPES = new Set([7, 8, 12]) // CC14, NRPN, CC14 LSB first
+// Serialize an MSB.LSB float the way the Drop writes it: ALWAYS three decimal places (5/0 -> "5.000",
+// 1/100 -> "1.100"). We write this verbatim rather than via formatValue, whose "mirror the original
+// token's decimals" rule would clip the LSB if the prior msgNr had fewer than 3 (e.g. a bare "52").
+export function formatBankFloat(packed: number): string {
+  return packed.toFixed(3)
+}
+
 // Behavior — a single global enum across control types (decoded from a hardware capture).
 export const BEHAV: Record<number, string> = {
   0: 'Precision', 1: 'Dynamic Pot', 2: 'Dynamic Fast',
